@@ -1,0 +1,17 @@
+# Test Random World via long-press EDIT (800ms)
+wait 200
+expect random 0
+
+# Tap EDIT should change chord but NOT trigger random world
+press EDIT
+wait 50
+release EDIT
+wait 50
+expect random 0
+
+# Long press EDIT (850ms) should trigger random world
+press EDIT
+wait 850
+release EDIT
+wait 50
+expect random 1

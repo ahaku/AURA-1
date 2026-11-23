@@ -26,13 +26,18 @@ run() {
 }
 run amb sh -c "$CC -O2 -ffp-contract=off -std=c99 -Wall -Wextra -Wdouble-promotion -Werror -DEN_HOST -Iapp/dsp -Ibase/include \
     -o $OUT/amb_test tests/host/amb_test.c app/dsp/amb.c -lm && $OUT/amb_test"
-if [ -f $B/amb.fwsc ]; then
-    run ota-entry sh -c "$CC -w -o $OUT/ota_test base/tests/ota_test.c && $OUT/ota_test $B/amb.fwsc"
-    run update-loader sh -c "head -c 100000 $B/amb.bin > $OUT/old_app.bin && \
+FWSC=""
+for f in "$B/aura-1.fwsc" "$B/amb.fwsc"; do
+    if [ -f "$f" ]; then FWSC="$f"; break; fi
+done
+if [ -n "$FWSC" ]; then
+    BIN="${FWSC%.fwsc}.bin"
+    run ota-entry sh -c "$CC -w -o $OUT/ota_test base/tests/ota_test.c && $OUT/ota_test $FWSC"
+    run update-loader sh -c "head -c 100000 $BIN > $OUT/old_app.bin && \
         $PY base/tools/fm1pkg_make.py $OUT/old_app.bin $B/loader/ota.bin $OUT/old.fwsc >/dev/null && \
-        $CC -w -o $OUT/ldr_test base/tests/ldr_test.c && $OUT/ldr_test $OUT/old.fwsc $B/amb.fwsc"
+        $CC -w -o $OUT/ldr_test base/tests/ldr_test.c && $OUT/ldr_test $OUT/old.fwsc $FWSC"
 else
-    echo "  skip update path (no $B/amb.fwsc: ./build.sh)"
+    echo "  skip update path (no firmware package in $B: ./build.sh)"
 fi
 run host-build sh build.sh --host
 if command -v emcc >/dev/null 2>&1; then
@@ -44,7 +49,8 @@ fi
 for s in tests/scenarios/*.amb; do
     n=$(basename "$s" .amb)
     mkdir -p "$B/scenarios/$n"
-    run "scenario-$n" $B/host/amb_host "$s" "$B/scenarios/$n"
+    run "scenario-$n" $B/host/aura-1_host "$s" "$B/scenarios/$n"
 done
+run documentation "$PY" -m unittest discover -s tests/host -p '*_test.py'
 [ $FAIL -eq 0 ] && echo "all tests passed" || echo "TESTS FAILED"
 exit $FAIL

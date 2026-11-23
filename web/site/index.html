@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>AURA-1 | Music that grows itself</title>
+    __STUDIO_HEAD__
+  </head>
+  <body class="studio-site home-page">
+    <a class="skip" href="#content">Skip to content</a>
+    __STUDIO_HEADER__
+    <main class="site-main" id="content" tabindex="-1">
+      <section class="home-hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="hero-kicker">A small instrument. An endless composition.</p>
+          <h1 class="hero-title" id="hero-title">
+            Music that<br />grows itself.
+          </h1>
+          <p class="hero-description">
+            AURA-1 turns your FM-1 into a living ambient instrument. Plant a few
+            notes, play along, and let it find its own way.
+          </p>
+          <p class="hero-description">
+            AURA-1 is a modified copy of Charles Vestal's AMB-1. It adds Solo
+            Mode for live polyphonic playing and Random World, a preset randomizer.
+            <a href="https://github.com/charlesvestal/fm1-amb">Original AMB-1 on GitHub</a>.
+          </p>
+          <div class="hero-actions">
+            <button
+              class="studio-button"
+              type="button"
+              id="listen-button"
+              aria-pressed="false"
+              aria-controls="instrument-preview"
+            >
+              <span class="button-label">Start listening</span>
+              <span class="button-icon" aria-hidden="true">
+                <svg class="icon-play" viewBox="0 0 24 24" fill="currentColor" focusable="false">
+                  <path d="m8 5 11 7-11 7V5Z" />
+                </svg>
+                <svg class="icon-pause" viewBox="0 0 24 24" fill="currentColor" focusable="false">
+                  <rect x="6" y="5" width="4" height="14" rx="1" />
+                  <rect x="14" y="5" width="4" height="14" rx="1" />
+                </svg>
+              </span>
+            </button>
+            <a class="text-link" href="install/">Install firmware v__VERSION__</a>
+          </div>
+          <p class="hero-note">Try it here. No hardware or download needed.</p>
+        </div>
+        <div class="hero-preview">
+          <div class="sound-stage">
+            <iframe
+              id="instrument-preview"
+              src="emu/?embed=1"
+              title="AURA-1 live instrument preview"
+              allow="autoplay"
+            ></iframe>
+          </div>
+          <div class="preview-caption">
+            <span class="preview-state" id="preview-state" role="status"
+              >Ready to play</span
+            ><a href="emu/">Open the full instrument</a>
+          </div>
+        </div>
+      </section>
+      <div class="feature-strip" aria-label="Instrument features">
+        <span><i aria-hidden="true"></i>16 generative pieces</span
+        ><span><i aria-hidden="true"></i>A live polyphonic synth</span
+        ><span><i aria-hidden="true"></i>Five atmospheric textures</span
+        ><span><i aria-hidden="true"></i>Open-source firmware</span>
+      </div>
+      <section class="sound-worlds" aria-labelledby="worlds-title">
+        <div class="section-heading">
+          <h2 id="worlds-title">Find your<br />own atmosphere.</h2>
+          <p>
+            Leave a world to unfold, or reach in and change it. There is no
+            right way to play.
+          </p>
+        </div>
+        <a class="world-row" href="emu/" data-listen-piece="0"
+          ><img
+            src="img/screen-garden.png"
+            width="240"
+            height="240"
+            alt="Garden's scale, chord and four layer levels"
+            loading="lazy"
+          />
+          <h3>Let it grow.</h3>
+          <p>
+            Breathing voices, drifting bass and bell loops of unequal length. A
+            garden that plays itself.
+          </p>
+          <span class="world-action" aria-label="Listen to Garden">↗</span></a
+        >
+        <a class="world-row" href="emu/" data-listen-piece="13"
+          ><img
+            src="img/screen-bamboo.png"
+            width="240"
+            height="240"
+            alt="Bamboo: A pentatonic minor at tempo 48"
+            loading="lazy"
+          />
+          <h3>Bamboo.</h3>
+          <p>
+            Meditative minimalism in a vast temple echo. No pulse, no bass;
+            just notes with room around them.
+          </p>
+          <span class="world-action" aria-label="Listen to Bamboo">↗</span></a
+        >
+        <a class="world-row" href="emu/" data-listen-random
+          ><img
+            src="img/screen-random-worlds.png"
+            width="240"
+            height="240"
+            alt="Several possible musical worlds branching from one glowing seed"
+            loading="lazy"
+          />
+          <h3>Surprise me.</h3>
+          <p>
+            Generate a new world of scale, rhythm, voices and space. Every
+            click starts somewhere different.
+          </p>
+          <span class="world-action" aria-label="Generate a random world"
+            >↗</span
+          ></a
+        >
+        <a class="world-row" href="emu/"
+          ><img
+            src="img/screen-solo.png"
+            width="240"
+            height="240"
+            alt="The live Solo synth and arpeggiator"
+            loading="lazy"
+          />
+          <h3>Make it yours.</h3>
+          <p>
+            Play the polyphonic Solo synth over the garden. Shape a sound, hold
+            an arpeggio, record what happens.
+          </p>
+          <span class="world-action" aria-label="Open the instrument"
+            >↗</span
+          ></a
+        >
+      </section>
+      <section class="garden-section" aria-labelledby="garden-title">
+        <div class="garden-copy">
+          <p class="section-kicker">An instrument you tend</p>
+          <h2 id="garden-title">A few notes.<br />A world of their own.</h2>
+          <p>
+            Every key adds a note to the garden or takes it away. The layers
+            share that scale, meeting in chords that slowly change.
+          </p>
+          <p>
+            Turn a knob to bring a sound closer. Freeze a moment. Add rain at
+            the window. A little attention goes a long way.
+          </p>
+          <a class="text-link" href="manual/#s2">Get to know the garden</a>
+        </div>
+        <div class="garden-picture">
+          <img
+            src="img/screen-garden.png"
+            width="240"
+            height="240"
+            alt="Garden on the FM-1's LCD: D Dorian, Dm7, tempo 72"
+            loading="lazy"
+          />
+        </div>
+      </section>
+      <section class="install-invite" aria-labelledby="install-title">
+        <div>
+          <p class="section-kicker">For the instrument on your desk</p>
+          <h2 id="install-title">Your FM-1.<br />A different kind of music.</h2>
+        </div>
+        <div>
+          <p>
+            Install AURA-1 over USB and take the garden away from the browser.
+            The illustrated guide helps you find your way around.
+          </p>
+          <div class="hero-actions">
+            <a class="studio-button" href="install/"
+              >Install AURA-1<span class="button-arrow" aria-hidden="true"
+                >↗</span
+              ></a
+            ><a class="text-link" href="manual/">Read the guide</a>
+          </div>
+          <p class="installation-meta">
+            Chrome or Edge · USB MIDI ·
+            <a href="firmware/__PKG__">Firmware v__VERSION__</a>
+          </p>
+        </div>
+      </section>
+    </main>
+    __STUDIO_FOOTER__
+  </body>
+</html>

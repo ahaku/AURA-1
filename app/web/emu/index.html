@@ -1,0 +1,2193 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0
+     Copyright (C) 2026 Charles Vestal -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{NAME}} in the browser</title>
+<meta name="description" content="{{NAME}} for the M-VAVE FM-1 (built on top of fm1-amb), in the browser: the same code the FM-1 runs.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f2f0e7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{NAME}}">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" href="icon.svg?v=ef305e902a1d" type="image/svg+xml" sizes="any">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Instrument theme */
+:root {
+  --ground: #07090e;
+  --ink: #e2e8f0;
+  --muted: #8896ab;
+  --rule: #1b2234;
+  --accent: #38bdf8;
+  --river: #38bdf8;
+  --river-2: #818cf8;
+  --green-1: #38bdf8;
+  --card: #0d121d;
+  --focus: #38bdf8;
+  --bad: #f87171;
+  --teal: #38bdf8;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #07090e;
+    --ink: #e2e8f0;
+    --muted: #8896ab;
+    --rule: #1b2234;
+    --accent: #38bdf8;
+    --river: #38bdf8;
+    --river-2: #818cf8;
+    --green-1: #38bdf8;
+    --card: #0d121d;
+    --focus: #38bdf8;
+    --bad: #f87171;
+    --teal: #38bdf8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #07090e;
+  --ink: #e2e8f0;
+  --muted: #8896ab;
+  --rule: #1b2234;
+  --accent: #38bdf8;
+  --river: #38bdf8;
+  --river-2: #818cf8;
+  --green-1: #38bdf8;
+  --card: #0d121d;
+  --focus: #38bdf8;
+  --bad: #f87171;
+  --teal: #38bdf8;
+  color-scheme: dark;
+}
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+body {
+  background: transparent;
+  color: var(--ink);
+  margin: 0;
+  padding-inline: 16px;
+  padding-block: 28px 48px;
+  font: 400 16px/1.55 "Barlow", "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+}
+main, body > header { max-width: 1040px; margin: 0 auto; }
+header {
+  position: relative;
+  z-index: 500;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .6rem 1.4rem;
+  margin: 0 0 1.4rem;
+  background: rgba(10, 16, 28, 0.76);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 14px;
+  padding: 1rem 1.6rem;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+}
+h1 { font: 700 2rem/1.1 "Barlow Semi Condensed", "Barlow", sans-serif; letter-spacing: .06em; margin: 0; color: #fff; }
+header p { margin: 0; color: #94a3b8; font-size: 0.95rem; }
+header nav { margin-left: auto; display: flex; gap: 1.2rem; align-items: baseline; }
+header nav a { color: #cbd5e1; text-decoration: none; font-weight: 500; transition: color .15s; }
+header nav a:hover { color: var(--accent); }
+header nav a[aria-current] { color: var(--accent); font-weight: 700; }
+a { color: var(--accent); text-decoration-color: var(--river-2); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+a:hover { color: #7dd3fc; }
+
+/* Zen mode toggle button in header */
+.zen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: rgba(13, 18, 29, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 8px;
+  color: var(--ink);
+  padding: .35em .8em;
+  font: 600 .85rem/1.2 "Barlow Semi Condensed", "Barlow", sans-serif;
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+}
+.zen-btn:hover {
+  background: #0e1e33;
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+}
+
+/* Floating Zen mode exit button */
+.zen-exit {
+  display: none;
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10000;
+  align-items: center;
+  gap: 7px;
+  background: rgba(13, 18, 29, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #e2e8f0;
+  font: 600 13px/1 "Barlow Semi Condensed", "Barlow", sans-serif;
+  letter-spacing: .04em;
+  padding: 8px 14px;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.85;
+  box-shadow: 0 0 16px rgba(0,0,0,0.6);
+  transition: opacity .2s, background .2s, border-color .2s, color .2s;
+}
+.zen-exit:hover {
+  opacity: 1;
+  background: #0e1e33;
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
+}
+
+/* Tape Recorder: Button & Deck */
+.tape-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  background: rgba(13, 18, 29, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 8px;
+  color: var(--ink);
+  padding: .35em .8em;
+  font: 600 .85rem/1.2 "Barlow Semi Condensed", "Barlow", sans-serif;
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+}
+.tape-btn:hover {
+  background: #0e1e33;
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25);
+}
+.tape-btn.active {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.16);
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
+}
+.tape-btn.recording {
+  border-color: #f87171;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.18);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35);
+}
+.tape-btn.recording svg {
+  color: #ef4444;
+  animation: recPulse 1.2s infinite ease-in-out;
+}
+@keyframes recPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.92); }
+}
+
+/* Tape Dropdown Container */
+.tape-dropdown-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Tape Deck Dropdown Panel */
+.tape-deck-dropdown,
+.tape-deck-modal {
+  position: absolute;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: rgba(10, 16, 28, 0.96);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.32);
+  border-radius: 14px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 24px rgba(56, 189, 248, 0.15);
+  z-index: 10001;
+  padding: 1.1rem;
+  color: var(--ink);
+  animation: tapeDropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 1. Side-right: When there is space to the right of the button */
+.tape-deck-dropdown.pos-side-right {
+  top: -6px;
+  left: calc(100% + 14px);
+  right: auto;
+  transform-origin: top left;
+}
+.tape-deck-dropdown.pos-side-right::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: -6px;
+  right: auto;
+  width: 10px;
+  height: 10px;
+  background: #0a101c;
+  border-left: 1px solid rgba(56, 189, 248, 0.32);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.32);
+  border-top: none;
+  border-right: none;
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+/* 2. Below-left: When there is space under the button extending right */
+.tape-deck-dropdown.pos-below-left {
+  top: calc(100% + 10px);
+  left: 0;
+  right: auto;
+  transform-origin: top left;
+}
+.tape-deck-dropdown.pos-below-left::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 24px;
+  right: auto;
+  width: 10px;
+  height: 10px;
+  background: #0a101c;
+  border-left: 1px solid rgba(56, 189, 248, 0.32);
+  border-top: 1px solid rgba(56, 189, 248, 0.32);
+  border-bottom: none;
+  border-right: none;
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+/* 3. Below-right: Default / fallback when tight on the right side */
+.tape-deck-dropdown,
+.tape-deck-dropdown.pos-below-right {
+  top: calc(100% + 10px);
+  right: 0;
+  left: auto;
+  transform-origin: top right;
+}
+.tape-deck-dropdown::before,
+.tape-deck-dropdown.pos-below-right::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  left: auto;
+  width: 10px;
+  height: 10px;
+  background: #0a101c;
+  border-left: 1px solid rgba(56, 189, 248, 0.32);
+  border-top: 1px solid rgba(56, 189, 248, 0.32);
+  border-bottom: none;
+  border-right: none;
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+@keyframes tapeDropdownFadeIn {
+  from {
+    transform: scale(0.97);
+  }
+  to {
+    transform: none;
+  }
+}
+
+.tape-deck-dropdown[hidden],
+.tape-deck-modal[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 480px) {
+  .tape-deck-dropdown,
+  .tape-deck-modal {
+    position: fixed !important;
+    top: 72px !important;
+    left: 16px !important;
+    right: 16px !important;
+    width: auto !important;
+    max-width: none !important;
+    transform: none !important;
+  }
+  .tape-deck-dropdown::before,
+  .tape-deck-modal::before {
+    display: none !important;
+  }
+}
+.tape-deck-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tape-deck-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.tape-deck-title svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.tape-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.tape-title-text {
+  font: 700 0.95rem/1.1 "Barlow Semi Condensed", sans-serif;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-transform: uppercase;
+}
+.tape-sub-badge {
+  font: 600 0.68rem/1 "Barlow", sans-serif;
+  color: #94a3b8;
+  letter-spacing: 0.03em;
+}
+.tape-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.tape-close-btn:hover {
+  color: #fff;
+}
+
+.tape-deck-dropdown.recording {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 20px rgba(239, 68, 68, 0.2);
+}
+
+/* Status Row: Counter, VU, Size */
+.tape-status-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.85rem;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+.status-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.status-label {
+  font: 700 0.6rem/1 "Barlow Semi Condensed", sans-serif;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.status-val {
+  font: 700 0.95rem/1 "Barlow Semi Condensed", monospace;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+/* Analog LED Peak Level Meter */
+.status-col.vu-col {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.vu-scale-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 124px;
+  margin-bottom: 3px;
+  padding: 0 1px;
+  box-sizing: border-box;
+}
+.vu-db-text {
+  font: 600 0.52rem/1 "Barlow Semi Condensed", monospace;
+  color: #64748b;
+  letter-spacing: 0.04em;
+}
+.tape-led-canvas {
+  display: block;
+  width: 124px;
+  height: 26px;
+  background: #05080e;
+  border: 1px solid #172233;
+  border-radius: 5px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.85);
+  box-sizing: border-box;
+}
+
+/* Controls Grid */
+.tape-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 0.8rem;
+}
+.tape-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 34px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border-radius: 8px;
+  font: 600 0.85rem/1 "Barlow Semi Condensed", sans-serif;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+  border: 1px solid transparent;
+  user-select: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+.tape-ctrl-btn .ctrl-icon {
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+.tape-ctrl-btn span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.tape-ctrl-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.rec-btn {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: #f87171;
+  color: #fca5a5;
+}
+.rec-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+}
+.stop-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+}
+.stop-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+.download-btn {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: var(--accent);
+  color: #38bdf8;
+}
+.download-btn:hover:not(:disabled) {
+  background: var(--accent);
+  color: #07090e;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
+}
+.discard-btn {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: #475569;
+  color: #94a3b8;
+}
+.discard-btn:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: #f87171;
+  color: #fca5a5;
+}
+
+/* Limit & Hint */
+.tape-limit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.tape-limit-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #0f172a;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px 12px;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  height: 28px;
+  padding: 0 26px 0 8px;
+  font: 500 0.8rem/26px "Barlow", sans-serif;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.tape-limit-row select:hover {
+  border-color: #475569;
+  background-color: #162036;
+}
+.tape-limit-row select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.tape-hint-text {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  line-height: 1.35;
+  margin: 0;
+  padding-top: 4px;
+}
+
+/* Zen Mode active styling */
+html.zen, html.zen body { overflow: hidden; height: 100%; }
+html.zen body {
+  margin: 0; padding: 0;
+  height: 100vh; height: 100dvh; width: 100vw;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  box-sizing: border-box;
+}
+html.zen main {
+  max-width: none; margin: 0; padding: 0;
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+html.zen body > header,
+html.zen .turn,
+html.zen .bar,
+html.zen .speak,
+html.zen .help,
+html.zen #panel-keys,
+html.zen #live-a,
+html.zen #live-p {
+  display: none !important;
+}
+html.zen .devicebox {
+  overflow: visible; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0; padding: 0;
+}
+html.zen .device {
+  width: min(calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)), calc(100dvh * 1.5625));
+  max-width: 100%; max-height: 100%;
+  aspect-ratio: 1000 / 640;
+  margin: auto; min-width: 0;
+  border-radius: 4.4% / 6.875%;
+}
+html.zen .zen-exit { display: flex; }
+
+/* at phone width the drawn panel keeps its controls 24 px or more (WCAG 2.5.8): it keeps a minimum width and
+   scrolls sideways in its own box, not the page */
+.devicebox {
+  border-radius: 4.4% / 6.875%;
+}
+@media (min-width: 600px) {
+  .devicebox {
+    overflow: visible;
+  }
+}
+@media (max-width: 599px) {
+  .devicebox {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+}
+.device {
+  position: relative;
+  width: 100%;
+  min-width: 560px;
+  aspect-ratio: 1000 / 640;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  border-radius: 4.4% / 6.875%;
+}
+.device:focus { outline: none; }
+.device:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4.4% / 6.875%; }
+.device svg { pointer-events: none; }
+.hit { position: absolute; touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 12px; }
+.hit.knob { cursor: ns-resize; border-radius: 50%; }
+.hit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.device svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.device canvas { position: absolute; left: 31.8%; top: 9.6875%; width: 20%; height: 31.25%; image-rendering: pixelated; background: #000; border-radius: 2px; box-shadow: 0 0 16px rgba(56, 189, 248, 0.15); }
+.ctl { cursor: pointer; }
+.ctl.knob { cursor: ns-resize; }
+.btnface { transition: fill .06s; }
+.lit .btnface { fill: #38bdf8; }
+.lit text.btn { fill: #07090e; }
+.held .btnface { stroke: #38bdf8; stroke-width: 3; }
+.latched .btnface { stroke: #c084fc; stroke-width: 3; }
+
+/* FM-1 Hardware Authentic Keys */
+.face.key { fill: #0c0c0d; stroke: #222632; stroke-width: 1.5; transition: stroke .08s, fill .08s; }
+.ctl:hover .face.key { stroke: #384254; }
+.held .face.key { stroke: #ececee; stroke-width: 2.5; }
+.latched .face.key { stroke: #c084fc; stroke-width: 2.5; }
+.slit { fill: #181a20; transition: fill .05s, filter .05s; }
+.guide .slit { fill: #77777b; filter: drop-shadow(0 0 2px rgba(236, 236, 238, 0.4)); }
+.lit .slit { fill: #ececee; filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.85)) drop-shadow(0 0 7px rgba(255, 245, 225, 0.45)); }
+
+.start {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  pointer-events: none;
+  border-radius: 4.4% / 6.875%;
+}
+.start button { pointer-events: auto; }
+.start button { font: 600 1.2rem "Barlow Semi Condensed", "Barlow", sans-serif; letter-spacing: .08em; text-transform: uppercase; padding: .65em 1.8em;
+                border: 1px solid #38bdf8; background: #0e1e33; color: #38bdf8; cursor: pointer; border-radius: 6px; box-shadow: 0 0 24px rgba(56, 189, 248, 0.35); transition: background .15s, box-shadow .15s; }
+.start button:hover { background: #38bdf8; color: #07090e; box-shadow: 0 0 32px rgba(56, 189, 248, 0.6); }
+.start button:focus-visible { outline: 3px solid #38bdf8; outline-offset: 3px; }
+.start[hidden] { display: none; }
+.turn { display: none; margin: 0 0 .8rem; color: var(--muted); font-size: .92rem; }
+@media (orientation: portrait) and (max-width: 700px) { .turn { display: block; } }
+.start button:disabled { opacity: .6; cursor: progress; }
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem 1.4rem;
+  align-items: center;
+  margin: 1.2rem 0 0;
+  background: rgba(10, 16, 28, 0.76);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  padding: .85rem 1.4rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  color: #94a3b8;
+  font-size: .92rem;
+}
+.bar button, .speak button { font: inherit; color: var(--ink); background: rgba(18, 25, 41, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: .35em .9em; cursor: pointer; min-height: 2.2em; transition: border-color .15s, color .15s, background .15s; }
+.bar button:hover, .speak button:hover { border-color: var(--accent); color: var(--accent); background: rgba(24, 35, 58, 0.95); }
+.bar button[aria-pressed="true"] { background: var(--river); color: #07090e; font-weight: 600; }
+.speak button:disabled { opacity: .5; cursor: default; }
+#alert { color: var(--bad); font-weight: 600; flex-basis: 100%; }
+#alert:empty { display: none; }
+.speak {
+  margin: 1.3rem 0 0;
+  padding: 1.1rem 1.4rem;
+  background: rgba(10, 16, 28, 0.76);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.speak summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.speak summary h2 { display: inline; font: 600 1.15rem "Barlow Semi Condensed", "Barlow", sans-serif; margin: 0; color: var(--accent); }
+.speak[open] summary { margin: 0 0 .8rem; }
+.bar .keys { display: inline-flex; gap: .45rem; align-items: center; color: #cbd5e1; }
+.speak fieldset { border: 0; margin: 0 0 .6rem; padding: 0; display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; }
+.speak legend { font-weight: 600; padding: 0; margin: 0 0 .4rem; color: #f1f5f9; }
+.speak label { display: inline-flex; gap: .45rem; align-items: center; color: #cbd5e1; }
+.speak input { width: 1.1rem; height: 1.1rem; accent-color: var(--river-2); }
+.speak .row { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .6rem 0 0; }
+#said { font-size: 1.25rem; margin: .2rem 0 0; min-height: 1.6em; overflow-wrap: anywhere; color: #f8fafc; }
+#said:empty::before { content: "Nothing yet."; color: #64748b; font-size: 1rem; }
+.speak p.note { color: #94a3b8; margin: .4rem 0 0; font-size: .92rem; }
+@media (prefers-reduced-motion: reduce) { .btnface, .face.key, .slit { transition: none; } }
+.bar .cpu { font-variant-numeric: tabular-nums; color: #94a3b8; }
+.help {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.2rem 1.6rem;
+  margin: 1.4rem 0 0;
+}
+.help > div {
+  background: rgba(10, 16, 28, 0.76);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 12px;
+  padding: 1.2rem 1.6rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.help h2 { font: 700 1.2rem "Barlow Semi Condensed", "Barlow", sans-serif; letter-spacing: .02em; margin: 0 0 .5rem; color: var(--accent); }
+.help p, .help ul { margin: 0; color: #cbd5e1; line-height: 1.6; }
+.help ul { padding-left: 1.2rem; }
+.help li { margin-bottom: .4rem; }
+kbd { font: 600 .88em ui-monospace, Menlo, monospace; background: rgba(18, 25, 41, 0.9); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 4px; padding: .1em .4em; color: #38bdf8; }
+
+/* PWA update notification toast */
+.pwa-toast {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  color: var(--ink);
+  padding: .65rem 1.15rem;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  align-items: center;
+  gap: 1.25rem;
+  font: 400 .9rem/1.2 "Barlow", sans-serif;
+  animation: pwa-slide-up .25s ease-out;
+}
+.pwa-toast-text strong {
+  display: block;
+  font: 700 .95rem "Barlow Semi Condensed", "Barlow", sans-serif;
+  color: var(--accent);
+  letter-spacing: .02em;
+}
+.pwa-toast-text span {
+  color: var(--muted);
+  font-size: .85rem;
+}
+.pwa-toast button {
+  background: #0e1e33;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: .45em 1em;
+  font: 700 .9rem "Barlow Semi Condensed", "Barlow", sans-serif;
+  cursor: pointer;
+  letter-spacing: .03em;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  transition: all .15s ease;
+}
+.pwa-toast button:hover {
+  background: var(--accent);
+  color: #07090e;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.5);
+}
+@keyframes pwa-slide-up {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+/* App version indicator in bottom-left corner */
+.app-version {
+  position: fixed;
+  bottom: 8px;
+  left: 12px;
+  font: 600 0.8rem/1 "Barlow Semi Condensed", "Barlow", sans-serif;
+  color: var(--muted);
+  opacity: 0.65;
+  pointer-events: none;
+  z-index: 9999;
+  letter-spacing: 0.04em;
+  user-select: none;
+}</style>
+<link rel="preload" href="assets/fonts/manrope-400_800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/studio.css">
+<link rel="stylesheet" href="assets/studio-emu.css">
+<script>if(new URLSearchParams(location.search).has("embed"))document.documentElement.classList.add("embedded");</script>
+</head>
+<body class="studio-site studio-emu">
+<a class="skip" href="#content">Skip to instrument</a>
+<header class="studio-header"><a class="studio-brand" href="../" aria-label="AURA-1 home"><span class="brand-seed" aria-hidden="true"><i></i><i></i><i></i><i></i></span>AURA-1</a><span class="studio-edition">A generative instrument for the FM-1</span><nav aria-label="Main navigation"><a href="./" aria-current="page"><span>Play</span></a><a href="manual.html"><span>Guide</span></a><a href="../install/"><span>Install</span></a></nav></header>
+
+<button id="zenExit" type="button" class="zen-exit" aria-label="Exit Zen mode" title="Exit Zen mode (Shift+Esc)">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+  <span>Exit Zen</span>
+</button>
+
+<main id="content" class="instrument-main" tabindex="-1">
+<div class="instrument-heading"><div><p class="section-kicker">AURA-1 in your browser</p><h1>A quiet place to play.</h1><p>The real instrument. Take your time with it.</p></div><div class="toolbar-actions">  <button id="zenBtn" type="button" class="zen-btn" title="Zen mode: maximize synth, hide surroundings (Shift+Esc)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+    </svg>
+    <span>Zen mode</span>
+  </button>
+    <div class="tape-dropdown-wrap">
+    <button id="tapeBtn" type="button" class="tape-btn" aria-haspopup="dialog" aria-expanded="false" title="Recording: record audio session to lossless WAV (R)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <circle cx="12" cy="12" r="4" fill="currentColor"></circle>
+      </svg>
+      <span>Recording</span>
+    </button>
+
+    <div id="tapeDeck" class="tape-deck-dropdown" hidden role="dialog" aria-label="Audio Recording">
+      <div class="tape-deck-header">
+        <div class="tape-deck-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <circle cx="12" cy="12" r="4" fill="currentColor"></circle>
+          </svg>
+          <div class="tape-title-group">
+            <span class="tape-title-text">Recording</span>
+            <span class="tape-sub-badge" id="tapeSub">16-Bit Lossless · 44.1 kHz</span>
+          </div>
+        </div>
+        <button id="tapeClose" type="button" class="tape-close-btn" aria-label="Close Recording">×</button>
+      </div>
+
+      <div class="tape-status-row">
+        <div class="status-col">
+          <span class="status-label">Counter</span>
+          <span class="status-val" id="tapeTimer">00:00</span>
+        </div>
+        <div class="status-col vu-col">
+          <div class="vu-scale-labels">
+            <span class="status-label">PEAK LEVEL</span>
+            <span class="vu-db-text">-12 -6 0 +3 dB</span>
+          </div>
+          <canvas id="tapeLedCanvas" class="tape-led-canvas" width="248" height="52" role="img" aria-label="Peak Level Meter"></canvas>
+        </div>
+        <div class="status-col">
+          <span class="status-label">Size</span>
+          <span class="status-val" id="tapeSize">0.0 MB</span>
+        </div>
+      </div>
+
+      <div class="tape-limit-row">
+        <label for="tapeDurationLimit">Auto-stop limit:</label>
+        <select id="tapeDurationLimit">
+          <option value="0">No limit (max 60m)</option>
+          <option value="180">3 minutes</option>
+          <option value="300">5 minutes</option>
+          <option value="600" selected>10 minutes</option>
+          <option value="900">15 minutes</option>
+          <option value="1800">30 minutes</option>
+        </select>
+      </div>
+
+      <div class="tape-controls-grid">
+        <button type="button" id="tapeRecBtn" class="tape-ctrl-btn rec-btn" title="Start recording">
+          <svg class="ctrl-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="12" r="7"></circle>
+          </svg>
+          <span>Record</span>
+        </button>
+        <button type="button" id="tapeStopBtn" class="tape-ctrl-btn stop-btn" disabled title="Stop recording">
+          <svg class="ctrl-icon" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <rect x="5" y="5" width="14" height="14" rx="2"></rect>
+          </svg>
+          <span>Stop</span>
+        </button>
+        <button type="button" id="tapeDiscardBtn" class="tape-ctrl-btn discard-btn" disabled title="Discard recording">
+          <svg class="ctrl-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+            <path d="M9 6V4a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 4v2"></path>
+          </svg>
+          <span>Discard</span>
+        </button>
+        <button type="button" id="tapeDownloadBtn" class="tape-ctrl-btn download-btn" disabled title="Save WAV to Downloads">
+          <svg class="ctrl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Download WAV</span>
+        </button>
+      </div>
+
+      <p class="tape-hint-text" id="tapeHint">
+        Press Record to capture your session in pristine lossless WAV.
+      </p>
+    </div>
+  </div>
+</div></div><h2 class="sr">The FM-1 instrument</h2>
+<div class="instrument-stage">
+<div class="devicebox">
+<div class="device" id="device">
+  <svg id="panel" viewBox="0 0 1000 640" aria-hidden="true" focusable="false"></svg>
+  <canvas id="screen" width="240" height="240" role="img" aria-label="The FM-1's screen. Its text is read out: see Screen Reader, below the panel"></canvas>
+  <div id="controls" role="group" aria-label="The FM-1's panel" aria-describedby="panel-keys" inert></div>
+  <div class="start" id="start"><button type="button" id="go">Switch on</button></div>
+</div>
+</div>
+<div class="mobile-stage"><canvas id="mobile-screen" width="480" height="480" role="img" aria-label="The FM-1 screen"></canvas><button id="mobile-power" class="studio-button" type="button">Switch on <span aria-hidden="true">↗</span></button></div>
+</div>
+<section class="mobile-console" id="mobile-console" aria-label="Touch instrument controls"></section>
+<p id="panel-keys" class="sr">Tab moves through the knobs, the buttons, the black keys and the white keys. Arrow keys turn a knob,
+  Page Up and Page Down faster. Space or Enter holds a button or key down while you hold it; Shift and Enter keeps it down
+  until you press it again (with a mouse: Shift-click or right-click).</p>
+
+<div class="bar">
+  <span id="status" role="status">Off. Sound starts when you switch it on.</span>
+  <span id="alert" role="alert"></span>
+  <button id="mute" type="button" aria-pressed="false">Mute</button>
+  <label class="keys"><input type="checkbox" id="shortcuts" checked> Keyboard shortcuts</label>
+  <span class="cpu" id="cpu"></span>
+  <button id="reset" type="button" aria-describedby="reset-why">Factory reset</button>
+  <span id="reset-why" class="sr">Forget what was saved and start again from the factory settings</span>
+</div>
+
+<details class="speak" id="speak">
+  <summary><h2>Screen Reader</h2></summary>
+  <fieldset>
+    <legend>Output</legend>
+    <label><input type="radio" name="speak" value="sr" checked> System screen reader</label>
+    <label><input type="radio" name="speak" value="voice"> Built-in voice</label>
+    <label><input type="radio" name="speak" value="off"> Off</label>
+  </fieldset>
+  <p id="said" aria-hidden="true"></p>
+  <div class="row">
+    <button type="button" id="where" disabled>Read whole screen</button>
+    <button type="button" id="again" disabled>Repeat last</button>
+  </div>
+</details>
+<!-- what the screen says, for the computer's screen reader -->
+<div id="live-p" class="sr" aria-live="polite" aria-atomic="true"></div>
+<div id="live-a" class="sr" aria-live="assertive" aria-atomic="true"></div>
+
+<div class="help">
+  <div>
+    <h2>Shortcuts</h2>
+    <p>While the panel has focus:</p>
+    <ul>
+      <li>White keys 1–8: <kbd>Q</kbd>–<kbd>I</kbd>, 9–16: <kbd>A</kbd>–<kbd>K</kbd>. Black keys 1–11: <kbd>1</kbd>–<kbd>0</kbd>, <kbd>-</kbd>.</li>
+      <li><kbd>C</kbd> SEL (Solo Mode), <kbd>P</kbd> PLAY, <kbd>O</kbd> REC (freeze), <kbd>V</kbd> ENV (Pad), <kbd>Esc</kbd> HOME, <kbd>N</kbd> EDIT (<kbd>Esc</kbd>+<kbd>N</kbd> Random World), <kbd>Z</kbd> / <kbd>X</kbd> OCT− / OCT+.</li>
+      <li><kbd>↑</kbd> <kbd>↓</kbd> turn SELECT. <kbd>Shift+Esc</kbd> Zen mode.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Controls</h2>
+    <p>Each control has an invisible button over it for the keyboard and a screen reader. Tab moves naturally between them without trapping focus; Space or Enter presses a button or key; Shift+Enter latches it. Arrow keys turn a knob, Page Up and Page Down faster.</p>
+  </div>
+</div>
+</main>
+
+
+<script>
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const BTN = { FX: 0, SEL: 1, ENV: 2, LFO: 3, EDIT: 4, GLO: 5, HOME: 6, SAVE: 7, ARP: 8, SEQ: 9, PLAY: 10, REC: 11, "OCT-": 12, "OCT+": 13 };
+const ENC = { SELECT: 0, ALGORITHM: 1, PRESETS: 2, KNOB1: 3, KNOB2: 4, KNOB3: 5, KNOB4: 6 };
+const WHITE_K = [0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26];
+const BLACK_K = [1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25];
+const BLACK_AFTER = [0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14];
+const BODY = "#151821", TRAY = "#0b0c10", KEY_W = "#d4d9e4", KEY_B = "#1b1d24", KNOB = "#12141a", BTNC = "#1f232e", LABEL = "#dce3f0";
+const STORE_KEY = "{{ID}}-emu-store", PREFS_KEY = "{{ID}}-emu-prefs";
+const $ = (id) => document.getElementById(id);
+let screenEl = null, ctx = null;
+const prefs = (() => { try { return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}"); } catch { return {}; } })();
+const savePrefs = () => { try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* private window */ } };
+
+// ---------------------------------------------------------------- zen mode
+function toggleZen(on = !document.documentElement.classList.contains("zen")) {
+  document.documentElement.classList.toggle("zen", on);
+  try { localStorage.setItem("zen-emu-zen", on ? "1" : "0"); } catch {}
+  if (typeof fitScreen === "function") fitScreen();
+  if (!on && window.updateTapeDropdownPlacement) {
+    window.updateTapeDropdownPlacement();
+  }
+}
+$("zenBtn").addEventListener("click", () => toggleZen());
+$("zenExit").addEventListener("click", () => toggleZen(false));
+if ((localStorage.getItem("zen-emu-zen") === "1" || localStorage.getItem("amb-emu-zen") === "1")) document.documentElement.classList.add("zen");
+addEventListener("keydown", (e) => {
+  if (e.code === "Escape" && e.shiftKey) {
+    toggleZen();
+    e.preventDefault();
+  }
+});
+
+const svg = $("panel");
+function el(tag, attrs, parent = svg) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  parent.appendChild(e);
+  return e;
+}
+function text(parent, x, y, s, size, fill = LABEL, weight = 600) {
+  const t = el("text", { x, y, "text-anchor": "middle", "font-family": "'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif",
+                         "font-size": size, "font-weight": weight, fill, "letter-spacing": ".05em", class: "btn", "pointer-events": "none" }, parent);
+  t.textContent = s;
+  return t;
+}
+
+// ---------------------------------------------------------------- the panel (a picture: aria-hidden)
+el("rect", { x: 4, y: 4, width: 992, height: 632, rx: 44, fill: BODY });
+const knobs = {};
+function knob(x, y, r, label, role, name) {
+  const g = el("g", { class: "ctl knob" });
+  el("circle", { cx: x, cy: y, r: r + 5, fill: TRAY }, g);
+  el("circle", { cx: x, cy: y, r, fill: KNOB, stroke: "#2c3345", "stroke-width": 2 }, g);
+  const ind = el("line", { x1: x, y1: y - r + 5, x2: x, y2: y - r + 15, stroke: LABEL, "stroke-width": 3, "stroke-linecap": "round" }, g);
+  text(g, x, y - r - 12, label, 17);
+  el("circle", { cx: x, cy: y, r: r + 14, fill: "transparent" }, g);
+  knobs[label] = { g, ind, x, y, angle: 0, role, name: name || label };
+  return knobs[label];
+}
+knob(105, 100, 24, "MASTER", "master");
+knob(215, 100, 24, "SELECT", ENC.SELECT);
+knob(105, 205, 24, "PRESETS", ENC.PRESETS);
+knob(215, 205, 24, "ALGORITHM", ENC.ALGORITHM);
+for (let i = 0; i < 4; i++) knob(610 + i * 104, 100, 22, `KNOB${i + 1}`, ENC[`KNOB${i + 1}`], `KNOB ${i + 1}`);
+
+const buttons = {};
+function button(x, y, w, h, label, two) {
+  const g = el("g", { class: "ctl" });
+  el("rect", { x, y, width: w, height: h, rx: 9, fill: BTNC, stroke: "#30394c", "stroke-width": 1.5, class: "btnface" }, g);
+  if (two) { text(g, x + w / 2, y + h / 2 - 1, label, 12); text(g, x + w / 2, y + h / 2 + 12, two, 12); }
+  else text(g, x + w / 2, y + h / 2 + 5, label, 15);
+  buttons[label] = { g, bit: BTN[label], name: { "OCT-": "OCT minus", "OCT+": "OCT plus" }[label] || label, light: "" };
+}
+el("rect", { x: 58, y: 258, width: 210, height: 58, rx: 14, fill: TRAY });
+button(72, 268, 82, 38, "OCT-"); button(170, 268, 82, 38, "OCT+");
+el("rect", { x: 300, y: 44, width: 236, height: 236, rx: 26, fill: "#0c0d12" });
+el("rect", { x: 568, y: 160, width: 400, height: 140, rx: 18, fill: TRAY });
+const ROW1 = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO"], ROW2 = ["HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC"];
+for (let i = 0; i < 6; i++) button(582 + i * 63, 174, 54, 48, ROW1[i]);          // row by row: the reading order
+for (let i = 0; i < 6; i++) button(582 + i * 63, 236, 54, 48, ROW2[i], ROW2[i] === "PLAY" ? "STOP" : undefined);
+
+const keys = [];
+(function keybed(x0, y0, w, h) {
+  el("rect", { x: x0, y: y0, width: w, height: h, rx: 18, fill: TRAY });
+  const pitch = (w - 24) / 16, kw = pitch * 0.78, kh = h * 0.425, sw = Math.max(3, kw * 0.14);
+  const key = (cx, cy, k, name) => {
+    const g = el("g", { class: "ctl" });
+    const y = cy - kh / 2;
+    el("rect", { x: cx - kw / 2, y, width: kw, height: kh, rx: kw / 2, class: "face key" }, g);
+    el("rect", { x: cx - sw / 2, y: y + kw * 0.4, width: sw, height: kh - kw * 0.8, rx: sw / 2, class: "slit" }, g);
+    keys[k] = { g, name, light: "" };
+  };
+  WHITE_K.forEach((k, i) => key(x0 + 12 + (i + 0.5) * pitch, y0 + h * 0.73, k, `White key ${i + 1}`));
+  BLACK_AFTER.forEach((a, j) => key(x0 + 12 + (a + 1) * pitch, y0 + h * 0.27, BLACK_K[j], `Black key ${j + 1}`));
+})(36, 340, 928, 270);
+
+// ---------------------------------------------------------------- the controls
+const controls = $("controls");
+function group(label) {
+  const d = document.createElement("div");
+  d.setAttribute("role", "group");
+  d.setAttribute("aria-label", label);
+  controls.appendChild(d);
+  return d;
+}
+function hit(c, parent, attrs, cls) {
+  const b = c.g.getBBox(), d = document.createElement("div");
+  d.className = "hit" + (cls ? " " + cls : "");
+  Object.assign(d.style, { left: `${b.x / 10}%`, top: `${b.y / 6.4}%`, width: `${b.width / 10}%`, height: `${b.height / 6.4}%` });
+  d.tabIndex = 0;
+  for (const [k, v] of Object.entries(attrs)) if (v != null) d.setAttribute(k, v);
+  if (attrs["aria-description"]) d.title = attrs["aria-description"];
+  d.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+  d.addEventListener("pointerdown", () => d.focus({ preventScroll: true }));
+  parent.appendChild(d);
+  c.hit = d;
+}
+const gKnobs = group("Knobs"), gButtons = group("Buttons"), gBlack = group("Black keys"), gWhite = group("White keys");
+let master = 2800;
+const masterPct = () => Math.round(master * 100 / 4096);
+for (const [label, k] of Object.entries(knobs)) {
+  if (k.role === "master")
+    hit(k, gKnobs, { role: "slider", "aria-label": "MASTER", "aria-description": "Volume", "aria-orientation": "vertical",
+                     "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": masterPct(), "aria-valuetext": `${masterPct()} percent` }, "knob");
+  else
+    hit(k, gKnobs, { role: "button", "aria-label": k.name,
+                     "aria-description": "Turn it with the arrow keys, Page Up and Page Down for big steps" }, "knob");
+}
+for (const lbl of ["OCT-", "OCT+", ...ROW1, ...ROW2])
+  hit(buttons[lbl], gButtons, { role: "button", "aria-label": buttons[lbl].name, "aria-pressed": "false"});
+BLACK_K.forEach((n) => hit(keys[n], gBlack, { role: "button", "aria-label": keys[n].name, "aria-pressed": "false" }));
+WHITE_K.forEach((n) => hit(keys[n], gWhite, { role: "button", "aria-label": keys[n].name, "aria-pressed": "false" }));
+
+// ---------------------------------------------------------------- state and input
+let node = null, gain = null, btnMask = 0, keyMask = 0, latched = 0, keyLatched = 0;
+const btnHeldBy = new Map(), keyHeldBy = new Map();
+function send(m) { if (node) node.port.postMessage(m); }
+function syncButtons() {
+  let m = latched;
+  for (const b of btnHeldBy.values()) m |= 1 << b;
+  if (m !== btnMask) { btnMask = m; send({ type: "buttons", mask: m }); }
+  for (const b of Object.values(buttons)) {
+    b.g.classList.toggle("held", !!(m & (1 << b.bit)));
+    b.g.classList.toggle("latched", !!(latched & (1 << b.bit)));
+    b.hit.classList.toggle("latched", !!(latched & (1 << b.bit)));
+    const pressed = m & (1 << b.bit) ? "true" : "false";
+    if (b.hit.getAttribute("aria-pressed") !== pressed) b.hit.setAttribute("aria-pressed", pressed);
+  }
+}
+function syncKeys() {
+  let m = keyLatched;
+  for (const k of keyHeldBy.values()) m |= 1 << k;
+  if (m !== keyMask) { keyMask = m; send({ type: "keys", mask: m }); }
+  keys.forEach((k, i) => {
+    k.g.classList.toggle("held", !!(m & (1 << i)));
+    k.g.classList.toggle("latched", !!(keyLatched & (1 << i)));
+    const pressed = m & (1 << i) ? "true" : "false";
+    if (k.hit && k.hit.getAttribute("aria-pressed") !== pressed) k.hit.setAttribute("aria-pressed", pressed);
+  });
+}
+
+for (const b of Object.values(buttons)) {
+  b.hit.addEventListener("contextmenu", (e) => e.preventDefault());
+  b.hit.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (e.shiftKey || e.button === 2) { latched ^= 1 << b.bit; syncButtons(); return; }
+    if (latched & (1 << b.bit)) { latched &= ~(1 << b.bit); syncButtons(); return; }
+    b.hit.setPointerCapture(e.pointerId);
+    btnHeldBy.set("p" + e.pointerId, b.bit);
+    syncButtons();
+  });
+}
+keys.forEach((k, i) => {
+  k.hit.addEventListener("contextmenu", (e) => e.preventDefault());
+  k.hit.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (e.shiftKey || e.button === 2) { keyLatched ^= 1 << i; syncKeys(); return; }
+    if (keyLatched & (1 << i)) { keyLatched &= ~(1 << i); syncKeys(); return; }
+    k.hit.setPointerCapture(e.pointerId);
+    keyHeldBy.set("p" + e.pointerId, i);
+    syncKeys();
+  });
+  if (WHITE_K.includes(i)) k.hit.addEventListener("pointermove", (e) => {
+    const id = "p" + e.pointerId;
+    if (!keyHeldBy.has(id)) return;
+    for (const w of WHITE_K) {
+      const r = keys[w].hit.getBoundingClientRect();
+      if (e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top - 40 && e.clientY < r.bottom + 40) {
+        if (keyHeldBy.get(id) !== w) { keyHeldBy.set(id, w); syncKeys(); }
+        return;
+      }
+    }
+  });
+});
+function pointerUp(e) {
+  const id = "p" + e.pointerId;
+  if (btnHeldBy.delete(id)) syncButtons();
+  if (keyHeldBy.delete(id)) syncKeys();
+}
+const device = $("device");
+device.addEventListener("pointerup", pointerUp);
+device.addEventListener("pointercancel", pointerUp);
+device.addEventListener("lostpointercapture", pointerUp);
+
+function drawKnob(k) {
+  k.ind.setAttribute("transform", `rotate(${k.angle} ${k.x} ${k.y})`);
+}
+function turn(k, n) {
+  if (!n) return;
+  if (k.role === "master") {
+    master = Math.max(0, Math.min(4096, master + n * 64));
+    k.angle = -135 + 270 * master / 4096;
+    k.hit.setAttribute("aria-valuenow", masterPct());
+    k.hit.setAttribute("aria-valuetext", `${masterPct()} percent`);
+    send({ type: "master", value: master });
+  } else {
+    k.angle = (k.angle + n * 18) % 360;
+    send({ type: "enc", role: k.role, n });
+  }
+  drawKnob(k);
+}
+for (const k of Object.values(knobs)) {
+  if (k.role === "master") { k.angle = -135 + 270 * master / 4096; drawKnob(k); }
+  let drag = null, wheel = 0;
+  k.hit.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    k.hit.setPointerCapture(e.pointerId);
+    drag = { y: e.clientY, acc: 0 };
+  });
+  k.hit.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    drag.acc += drag.y - e.clientY;
+    drag.y = e.clientY;
+    const step = k.role === "master" ? 3 : 7;
+    const n = Math.trunc(drag.acc / step);
+    if (n) { drag.acc -= n * step; turn(k, n); }
+  });
+  const end = () => { drag = null; };
+  k.hit.addEventListener("pointerup", end);
+  k.hit.addEventListener("pointercancel", end);
+  k.hit.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+    if (Math.abs(dy) >= 50) { turn(k, dy < 0 ? 1 : -1); wheel = 0; return; }
+    wheel -= dy;
+    const n = Math.trunc(wheel / 25);
+    if (n) { wheel -= n * 25; turn(k, n); }
+  }, { passive: false });
+  k.hit.addEventListener("keydown", (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const big = k.role === "master" ? 8 : 5;
+    const n = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: big, PageDown: -big }[e.key];
+    if (n) turn(k, n);
+    else if (k.role === "master" && (e.key === "Home" || e.key === "End")) turn(k, e.key === "End" ? 64 : -64);
+    else return;
+    e.preventDefault(); e.stopPropagation();
+  });
+}
+
+const downAt = new Map();
+function holdDown(id, kind, v) {
+  downAt.set(id, performance.now());
+  if (kind === "btn") { btnHeldBy.set(id, v); syncButtons(); } else { keyHeldBy.set(id, v); syncKeys(); }
+}
+function letGo(id) {
+  if (!btnHeldBy.has(id) && !keyHeldBy.has(id)) return;
+  const at = downAt.get(id), go = () => {
+    if (downAt.get(id) !== at) return;
+    downAt.delete(id);
+    if (btnHeldBy.delete(id)) syncButtons();
+    if (keyHeldBy.delete(id)) syncKeys();
+  };
+  const wait = 50 - (performance.now() - (at ?? 0));
+  if (wait > 0) setTimeout(go, wait); else go();
+}
+
+for (const [c, kind] of [...Object.values(buttons).map((b) => [b, "btn"]), ...keys.map((k, i) => [k, i])]) {
+  c.hit.addEventListener("pointerdown", () => { c.pointerAt = performance.now(); });
+  c.hit.addEventListener("click", (e) => {
+    if (!node || performance.now() - (c.pointerAt || -1e9) < 2000) return;
+    if (kind === "btn" && latched & (1 << c.bit)) { latched &= ~(1 << c.bit); syncButtons(); return; }
+    if (kind !== "btn" && keyLatched & (1 << kind)) { keyLatched &= ~(1 << kind); syncKeys(); return; }
+    holdDown("t", kind === "btn" ? "btn" : "key", kind === "btn" ? c.bit : kind);
+    setTimeout(() => letGo("t"), 80);
+  });
+  c.hit.addEventListener("keydown", (e) => {
+    if ((e.key !== " " && e.key !== "Enter") || e.metaKey || e.ctrlKey || e.altKey) return;
+    e.preventDefault(); e.stopPropagation();
+    if (e.repeat || !node) return;
+    if (kind === "btn" && e.key === "Enter" && e.shiftKey) { latched ^= 1 << c.bit; syncButtons(); return; }
+    if (kind !== "btn" && e.key === "Enter" && e.shiftKey) { keyLatched ^= 1 << kind; syncKeys(); return; }
+    if (kind === "btn") {
+      if (latched & (1 << c.bit)) { latched &= ~(1 << c.bit); syncButtons(); return; }
+      holdDown("f" + e.key, "btn", c.bit);
+    } else {
+      if (keyLatched & (1 << kind)) { keyLatched &= ~(1 << kind); syncKeys(); return; }
+      holdDown("f" + e.key, "key", kind);
+    }
+  });
+  c.hit.addEventListener("keyup", (e) => letGo("f" + e.key));
+  c.hit.addEventListener("blur", () => {
+    let b = false, k = false;
+    for (const id of ["f ", "fEnter"]) { b = btnHeldBy.delete(id) || b; k = keyHeldBy.delete(id) || k; }
+    if (b) syncButtons();
+    if (k) syncKeys();
+  });
+}
+
+// shortcuts: single letters, only while the panel has focus, and they can be turned off
+const KEYMAP = {};
+"qwertyui".split("").forEach((c, i) => KEYMAP["Key" + c.toUpperCase()] = { key: WHITE_K[i] });
+"asdfghjk".split("").forEach((c, i) => KEYMAP["Key" + c.toUpperCase()] = { key: WHITE_K[8 + i] });
+"1234567890".split("").forEach((c, i) => KEYMAP["Digit" + c] = { key: BLACK_K[i] });
+KEYMAP.Minus = { key: BLACK_K[10] };
+Object.assign(KEYMAP, {
+  KeyP: { btn: BTN.PLAY },
+  KeyO: { btn: BTN.REC },
+  KeyC: { btn: BTN.SEL },
+  KeyV: { btn: BTN.ENV },
+  KeyN: { btn: BTN.EDIT },
+  Escape: { btn: BTN.HOME },
+  KeyZ: { btn: BTN["OCT-"] },
+  KeyX: { btn: BTN["OCT+"] }
+});
+const shortcuts = $("shortcuts");
+if (prefs.shortcuts === false) shortcuts.checked = false;
+shortcuts.addEventListener("change", () => { prefs.shortcuts = shortcuts.checked; savePrefs(); });
+
+controls.addEventListener("keydown", (e) => {
+  if (e.code === "Escape" && e.shiftKey) {
+    toggleZen();
+    e.preventDefault();
+    return;
+  }
+  if (!node || !shortcuts.checked || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.code === "ArrowUp" || e.code === "ArrowDown") { turn(knobs.SELECT, e.code === "ArrowUp" ? 1 : -1); e.preventDefault(); return; }
+  const m = KEYMAP[e.code];
+  if (!m) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (m.key !== undefined) holdDown("k" + e.code, "key", m.key);
+  else holdDown("k" + e.code, "btn", m.btn);
+});
+addEventListener("keyup", (e) => letGo("k" + e.code));
+function letGoKeys() {
+  for (const id of [...btnHeldBy.keys()]) if (id[0] === "k" || id[0] === "f") btnHeldBy.delete(id);
+  for (const id of [...keyHeldBy.keys()]) if (id[0] === "k" || id[0] === "f") keyHeldBy.delete(id);
+  syncButtons(); syncKeys();
+}
+addEventListener("blur", letGoKeys);
+controls.addEventListener("focusout", (e) => { if (!controls.contains(e.relatedTarget)) letGoKeys(); });
+
+// ---------------------------------------------------------------- screen and lights
+screenEl = $("screen"); ctx = screenEl.getContext("2d");
+const lcd = document.createElement("canvas");
+lcd.width = lcd.height = 240;
+const lctx = lcd.getContext("2d"), img = lctx.createImageData(240, 240);
+function blitScreen() {
+  if (!screenEl || !ctx || !lcd) return;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(lcd, 0, 0, screenEl.width, screenEl.height);
+  for (const id of ["mobile-screen", "touch-mini-screen"]) {
+    const mobile = document.getElementById(id);
+    if (mobile) { const mctx = mobile.getContext("2d"); mctx.imageSmoothingEnabled = false; mctx.drawImage(lcd,0,0,mobile.width,mobile.height); }
+  }
+}
+function fitScreen() {
+  if (!screenEl) return;
+  const px = screenEl.getBoundingClientRect().width * (window.devicePixelRatio || 1);
+  const n = 240 * Math.max(1, Math.ceil(px / 240 - 0.001));
+  if (screenEl.width !== n) { screenEl.width = screenEl.height = n; blitScreen(); }
+}
+new ResizeObserver(fitScreen).observe(screenEl);
+matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`).addEventListener("change", fitScreen);
+function drawScreen(fb) {
+  const d = img.data;
+  for (let i = 0; i < 240 * 240; i++) {
+    const v = fb[i], p = ((v >> 8) | (v << 8)) & 0xFFFF;
+    d[i * 4] = ((p >> 11) & 31) * 255 / 31;
+    d[i * 4 + 1] = ((p >> 5) & 63) * 255 / 63;
+    d[i * 4 + 2] = (p & 31) * 255 / 31;
+    d[i * 4 + 3] = 255;
+  }
+  lctx.putImageData(img, 0, 0);
+  blitScreen();
+}
+function lightName(c, lit, now) {
+  if (c.wasLit === undefined) c.wasLit = lit;
+  if (lit !== c.wasLit) { c.wasLit = lit; c.changes = [...(c.changes || []).filter((t) => now - t < 2000), now]; }
+  const recent = (c.changes || []).filter((t) => now - t < 2000).length;
+  const state = recent >= 3 ? "blinking" : lit ? "lit" : "";
+  if (state !== c.light) { c.light = state; c.hit.setAttribute("aria-label", c.name + (state ? `, ${state}` : "")); }
+}
+function drawLights(b, k, dk = 0) {
+  const now = performance.now();
+  for (const x of Object.values(buttons)) {
+    const lit = !!(b & (1 << x.bit));
+    x.g.classList.toggle("lit", lit);
+    lightName(x, lit, now);
+  }
+  keys.forEach((x, i) => {
+    const lit = !!(k & (1 << i));
+    const guide = !!(dk & (1 << i)) && !lit;
+    x.g.classList.toggle("lit", lit);
+    x.g.classList.toggle("guide", guide);
+    lightName(x, lit, now);
+  });
+}
+
+// ---------------------------------------------------------------- the screen reader (fm1-reader)
+const SR_HELLO = [0x7d, 0x53, 0x52, 1, 1], SR_BYE = [0x7d, 0x53, 0x52, 2], SR_WHERE = [0x7d, 0x53, 0x52, 3];
+const speakMode = () => document.querySelector('input[name="speak"]:checked').value;
+if (prefs.speakOpen) $("speak").open = true;
+$("speak").addEventListener("toggle", () => { prefs.speakOpen = $("speak").open; savePrefs(); });
+if (["sr", "voice", "off"].includes(prefs.speak)) document.querySelector(`input[name="speak"][value="${prefs.speak}"]`).checked = true;
+let helloTimer = null, heard = false, said = false, words = [], wordsReady = null, chain = Promise.resolve();
+let spoken = (s) => s, tts = null, ttsReady = null, last = null, liveFlip = false, keeping = 0;
+const wordsLib = import("./reader/words.js").then((m) => { spoken = m.spoken; return m; }).catch(() => null);
+function sysex(bytes) { send({ type: "sysex", bytes }); }
+function readerOn() {
+  if (!node || helloTimer || speakMode() === "off") return;
+  heard = said = false;
+  sysex(SR_HELLO);
+  helloTimer = setInterval(() => sysex(SR_HELLO), 2000);
+}
+function readerOff() {
+  if (!helloTimer) return;
+  clearInterval(helloTimer);
+  helloTimer = null;
+  sysex(SR_BYE);
+  $("where").disabled = $("again").disabled = true;
+  $("said").textContent = "";
+}
+async function loadWords(link) {
+  const file = (link.match(/[^/]+\.json$/) || [""])[0];
+  const lib = await wordsLib;
+  if (!lib || !file) return [];
+  for (const url of [`words/${file}`, `../words/${file}`, link]) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return lib.wordsOf(await r.json());
+    } catch { /* offline, or not published yet */ }
+  }
+  return [];
+}
+function speak(text, now, keep) {
+  last = { text, now, keep };
+  $("said").textContent = text;
+  $("again").disabled = false;
+  if (speakMode() === "voice") {
+    if (!tts) return;
+    const p = tts.speak(text, { interrupt: now && !keeping });
+    if (keep) { keeping++; p.then(() => keeping--); }
+  } else if (speakMode() === "sr") {
+    liveFlip = !liveFlip;
+    (now || keep ? $("live-a") : $("live-p")).textContent = text + (liveFlip ? "" : " ");
+  }
+}
+function onSaid(bytes) {
+  for (let i = 0; i < bytes.length; i++) {
+    if (bytes[i] !== 0xf0) continue;
+    const end = bytes.indexOf(0xf7, i);
+    if (end < 0) break;
+    const f = bytes.subarray(i + 1, end);
+    i = end;
+    if (f[0] !== 0x7d || f[1] !== 0x53 || f[2] !== 0x52) continue;
+    const str = (d) => String.fromCharCode(...d.filter((b) => b < 128));
+    if (f[3] === 1 && !heard) {
+      heard = true;
+      const [name, link = ""] = str(f.subarray(5)).split("\0");
+      wordsReady = loadWords(link).then((w) => { words = w; });
+      $("where").disabled = false;
+      setTimeout(() => { if (!said && helloTimer) sysex(SR_WHERE); }, 400);
+    } else if (f[3] === 16) {
+      said = true;
+      const flags = f[4], screen = str(f.subarray(5));
+      chain = chain.then(() => wordsReady).then(() => speak(spoken(screen, words), !!(flags & 1), !!(flags & 2)));
+    }
+  }
+}
+async function voiceOn() {
+  if (!ttsReady) ttsReady = import("./reader/tts.js").then((m) => m.createTTS()).then((t) => (tts = t))
+    .catch(() => { showAlert("The built-in voice could not start in this browser. Choose System screen reader."); ttsReady = null; });
+  const t = await ttsReady;
+  if (t) t.unlock();
+}
+document.querySelectorAll('input[name="speak"]').forEach((r) => r.addEventListener("change", () => {
+  prefs.speak = speakMode(); savePrefs();
+  if (tts && speakMode() !== "voice") tts.stop();
+  if (speakMode() === "voice") voiceOn().then(() => tts && tts.speak("Voice on"));
+  if (speakMode() === "off") readerOff(); else readerOn();
+}));
+$("where").addEventListener("click", () => sysex(SR_WHERE));
+$("again").addEventListener("click", () => last && speak(last.text, true, last.keep));
+
+// ---------------------------------------------------------------- storage
+function loadStore() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY) || "{}"), out = {};
+    for (const [o, b64] of Object.entries(raw)) out[o] = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
+    return out;
+  } catch { return {}; }
+}
+function saveStore(store) {
+  try {
+    const raw = {};
+    for (const [o, u8] of Object.entries(store)) { let s = ""; for (const c of u8) s += String.fromCharCode(c); raw[o] = btoa(s); }
+    localStorage.setItem(STORE_KEY, JSON.stringify(raw));
+  } catch { /* storage unavailable */ }
+}
+
+// ---------------------------------------------------------------- switching on
+const status = $("status"), cpu = $("cpu");
+let appPart = null;
+function showAlert(t) { $("alert").textContent = t; }
+async function switchOn() {
+  const go = $("go");
+  go.disabled = true;
+  go.textContent = "Starting…";
+  status.textContent = "Starting…";
+  try {
+    const ac = new AudioContext({ sampleRate: 44100, latencyHint: "interactive" });
+    window.audioCtx = ac;
+    if (speakMode() === "voice") voiceOn();
+    const wasmFetch = fetch("app.wasm").then((r) => r.ok ? r.arrayBuffer() : fetch("amb.wasm").then((r2) => {
+      if (!r2.ok) throw new Error(`app.wasm: ${r.status}`);
+      return r2.arrayBuffer();
+    }));
+    const [wasm] = await Promise.all([
+      wasmFetch,
+      ac.audioWorklet.addModule("app_worklet.js").catch(() => {})
+        .then(() => ac.audioWorklet.addModule("worklet.js"))
+    ]);
+    node = new AudioWorkletNode(ac, "fm1", { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+    window.emuAudioNode = node;
+    gain = ac.createGain();
+    gain.gain.value = $("mute").getAttribute("aria-pressed") === "true" ? 0 : 1;
+    try {
+      const splitter = ac.createChannelSplitter(2);
+      const anL = ac.createAnalyser();
+      const anR = ac.createAnalyser();
+      anL.fftSize = 256;
+      anR.fftSize = 256;
+      node.connect(splitter);
+      splitter.connect(anL, 0);
+      splitter.connect(anR, 1);
+      window.audioAnalyserL = anL;
+      window.audioAnalyserR = anR;
+      window.audioAnalyser = anL;
+    } catch (_) {}
+    node.connect(gain).connect(ac.destination);
+    const ready = new Promise((res) => {
+      node.port.onmessage = (e) => {
+        const m = e.data;
+        if (m.type === "ready") res();
+        else if (m.type === "frame") {
+          if (m.fb) drawScreen(m.fb);
+          drawLights(m.buttons, m.keys, m.dim_keys || 0);
+          if (m.said) onSaid(m.said);
+          window.emuLast = m;
+          if (m.load !== undefined) cpu.textContent = `{{NAME}} uses ${m.load}% of this computer's time`;
+          if (m.store) saveStore(m.store);
+        } else if (m.type === "app" && appPart && appPart.message) appPart.message(m);
+        else if (window.onTapeWorkletMessage) window.onTapeWorkletMessage(m);
+      };
+    });
+    appPart = await import("./app.js").catch(() => null);
+    if (appPart && appPart.attach) appPart.attach({ node, ac, status: (t) => showAlert(t) });
+    node.port.postMessage({ type: "load", wasm, store: loadStore(), master }, [wasm]);
+    await ready;
+    await ac.resume();
+    $("start").hidden = true;
+    controls.inert = false;
+    status.textContent = ac.sampleRate === 44100 ? "On." : `On (the browser runs audio at ${ac.sampleRate} Hz).`;
+    syncButtons(); syncKeys();
+    readerOn();
+    if (typeof window.onAudioStarted === "function") window.onAudioStarted();
+    document.getElementById("mobile-power").hidden = true;
+    document.getElementById("mobile-console").inert = false;
+    document.body.classList.add("instrument-on");
+    if (!document.documentElement.classList.contains("embedded") && !matchMedia("(max-width:700px)").matches) knobs.MASTER.hit.focus();
+  } catch (err) {
+    node = null;
+    go.disabled = false;
+    go.textContent = "Switch on";
+    status.textContent = "Off.";
+    showAlert("Could not start: " + (err && err.message || err) + ". Chrome, Edge, Firefox and Safari should all work.");
+  }
+}
+$("go").addEventListener("click", switchOn);
+$("mute").addEventListener("click", () => {
+  const on = $("mute").getAttribute("aria-pressed") !== "true";
+  $("mute").setAttribute("aria-pressed", on ? "true" : "false");
+  if (gain) gain.gain.value = on ? 0 : 1;
+});
+$("reset").addEventListener("click", () => {
+  if ($("reset").dataset.armed) {
+    try { localStorage.removeItem(STORE_KEY); } catch {}
+    location.reload();
+  } else {
+    $("reset").dataset.armed = "1";
+    $("reset").textContent = "Press again to forget everything";
+  }
+});
+
+function reloadApp() {
+  const toast = document.getElementById("pwa-toast");
+  if (toast) toast.style.display = "none";
+  window.location.reload(true);
+}
+
+// PWA Service Worker registration with Update Notification
+if ("serviceWorker" in navigator && !document.documentElement.classList.contains("embedded")) {
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  function getCurrentVersion() {
+    const el = document.getElementById("app-version");
+    return el ? el.textContent.trim() : "";
+  }
+
+  function showUpdateToast() {
+    const toast = document.getElementById("pwa-toast");
+    if (toast) {
+      toast.style.display = "flex";
+    }
+    const btn = document.getElementById("pwa-reload-btn");
+    if (btn) btn.onclick = reloadApp;
+  }
+
+  document.addEventListener("click", (e) => {
+    if (e.target && e.target.id === "pwa-reload-btn") {
+      reloadApp();
+    }
+  });
+
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (hadController && event.data && event.data.type === "SW_UPDATED") {
+      showUpdateToast();
+    }
+  });
+
+  navigator.serviceWorker.register("sw.js").then((reg) => {
+    // Check for updates on startup and periodically
+    reg.update().catch(() => {});
+    setInterval(() => { reg.update().catch(() => {}); }, 30000);
+  }).catch(() => {});
+}
+
+// -------------------------------------------------------------
+// AURA-1 Tape Recorder & Lossless WAV Export
+// -------------------------------------------------------------
+(function tapeRecorderModule() {
+  const tapeDeck = $("tapeDeck");
+  const tapeBtn = $("tapeBtn");
+  const tapeClose = $("tapeClose");
+  const tapeRecBadge = $("tapeRecBadge");
+  const tapeSub = $("tapeSub");
+  const tapeTimerEl = $("tapeTimer");
+  const tapeSizeEl = $("tapeSize");
+  const tapeLedCanvas = $("tapeLedCanvas");
+  const vuCtx = tapeLedCanvas ? tapeLedCanvas.getContext("2d") : null;
+
+  const LED_CONFIG = [
+    // 0..5: Green (-24 dB to -2 dB)
+    { active: "#10b981", unlit: "#06150e", glow: "rgba(16, 185, 129, 0.7)" },
+    { active: "#10b981", unlit: "#06150e", glow: "rgba(16, 185, 129, 0.7)" },
+    { active: "#10b981", unlit: "#06150e", glow: "rgba(16, 185, 129, 0.7)" },
+    { active: "#10b981", unlit: "#06150e", glow: "rgba(16, 185, 129, 0.7)" },
+    { active: "#10b981", unlit: "#06150e", glow: "rgba(16, 185, 129, 0.7)" },
+    { active: "#10b981", unlit: "#06150e", glow: "rgba(16, 185, 129, 0.7)" },
+    // 6..7: Amber (0 dB to +2 dB)
+    { active: "#f59e0b", unlit: "#181105", glow: "rgba(245, 158, 11, 0.8)" },
+    { active: "#f59e0b", unlit: "#181105", glow: "rgba(245, 158, 11, 0.8)" },
+    // 8..9: Red (+4 dB & CLIP)
+    { active: "#ef4444", unlit: "#180707", glow: "rgba(239, 68, 68, 0.9)" },
+    { active: "#ef4444", unlit: "#180707", glow: "rgba(239, 68, 68, 0.9)" }
+  ];
+
+  function drawLedRect(ctx, x, y, w, h, r) {
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.fill();
+    } else {
+      ctx.fillRect(x, y, w, h);
+    }
+  }
+
+  function renderLEDCanvas(levelL, levelR) {
+    if (!vuCtx || !tapeLedCanvas) return;
+    const numLitL = Math.min(Math.round(levelL * 10), 10);
+    const numLitR = Math.min(Math.round(levelR * 10), 10);
+
+    const dpr = window.devicePixelRatio || 1;
+    const w = 122;
+    const h = 24;
+    const reqW = Math.round(w * dpr);
+    const reqH = Math.round(h * dpr);
+    if (tapeLedCanvas.width !== reqW || tapeLedCanvas.height !== reqH) {
+      tapeLedCanvas.width = reqW;
+      tapeLedCanvas.height = reqH;
+    }
+
+    vuCtx.save();
+    vuCtx.scale(dpr, dpr);
+    vuCtx.clearRect(0, 0, w, h);
+
+    // Channel labels L and R
+    vuCtx.font = "700 8px 'Barlow Semi Condensed', monospace, sans-serif";
+    vuCtx.fillStyle = "#64748b";
+    vuCtx.textBaseline = "middle";
+    vuCtx.textAlign = "left";
+    vuCtx.fillText("L", 4, 7);
+    vuCtx.fillText("R", 4, 17);
+
+    const startX = 15;
+    const ledW = 8;
+    const ledH = 6;
+    const gap = 2;
+    const rowY_L = 4;
+    const rowY_R = 14;
+
+    // First pass: Active glows
+    for (let i = 0; i < 10; i++) {
+      const x = startX + i * (ledW + gap);
+      const cfg = LED_CONFIG[i];
+
+      if (i < numLitL) {
+        vuCtx.shadowColor = cfg.glow;
+        vuCtx.shadowBlur = 4;
+        vuCtx.fillStyle = cfg.active;
+        drawLedRect(vuCtx, x, rowY_L, ledW, ledH, 1);
+      }
+      if (i < numLitR) {
+        vuCtx.shadowColor = cfg.glow;
+        vuCtx.shadowBlur = 4;
+        vuCtx.fillStyle = cfg.active;
+        drawLedRect(vuCtx, x, rowY_R, ledW, ledH, 1);
+      }
+    }
+
+    // Second pass: Crisp solid rectangles
+    vuCtx.shadowColor = "transparent";
+    vuCtx.shadowBlur = 0;
+
+    for (let i = 0; i < 10; i++) {
+      const x = startX + i * (ledW + gap);
+      const cfg = LED_CONFIG[i];
+
+      vuCtx.fillStyle = i < numLitL ? cfg.active : cfg.unlit;
+      drawLedRect(vuCtx, x, rowY_L, ledW, ledH, 1);
+
+      vuCtx.fillStyle = i < numLitR ? cfg.active : cfg.unlit;
+      drawLedRect(vuCtx, x, rowY_R, ledW, ledH, 1);
+    }
+
+    vuCtx.restore();
+  }
+  window.renderLEDCanvas = renderLEDCanvas;
+  renderLEDCanvas(0, 0);
+
+  // Safe variables for Audio and Metering
+  let ac = null;
+  let node = null;
+  let vuAnalyserL = null;
+  let vuAnalyserR = null;
+  let vuFloatL = new Float32Array(256);
+  let vuFloatR = new Float32Array(256);
+  let curL = 0, curR = 0;
+
+  function ensureAudio() {
+    if (!ac && window.audioCtx) ac = window.audioCtx;
+    if (!node && window.emuAudioNode) node = window.emuAudioNode;
+
+    if (window.audioAnalyserL && window.audioAnalyserR) {
+      vuAnalyserL = window.audioAnalyserL;
+      vuAnalyserR = window.audioAnalyserR;
+    } else if (window.audioAnalyser) {
+      vuAnalyserL = window.audioAnalyser;
+      vuAnalyserR = window.audioAnalyser;
+    } else if (ac && node && !vuAnalyserL) {
+      try {
+        const splitter = ac.createChannelSplitter(2);
+        vuAnalyserL = ac.createAnalyser();
+        vuAnalyserR = ac.createAnalyser();
+        vuAnalyserL.fftSize = 256;
+        vuAnalyserR.fftSize = 256;
+        node.connect(splitter);
+        splitter.connect(vuAnalyserL, 0);
+        splitter.connect(vuAnalyserR, 1);
+        window.audioAnalyserL = vuAnalyserL;
+        window.audioAnalyserR = vuAnalyserR;
+        window.audioAnalyser = vuAnalyserL;
+      } catch (_) {}
+    }
+  }
+
+  // Calibrated logarithmic dB conversion for FM-1 ambient synthesizer (-32 dB to -10 dB range)
+  function amplitudeToRatio(amp) {
+    if (amp <= 0.008) return 0;
+    const db = 20 * Math.log10(amp);
+    const minDb = -32;
+    const maxDb = -10;
+    const ratio = (db - minDb) / (maxDb - minDb);
+    return Math.min(Math.max(ratio, 0), 1);
+  }
+
+  function getAnalyserAmp(an, buf) {
+    if (!an) return 0;
+    if (an.getFloatTimeDomainData) {
+      an.getFloatTimeDomainData(buf);
+      let peak = 0;
+      let sumSq = 0;
+      const len = buf.length;
+      for (let i = 0; i < len; i++) {
+        const v = Math.abs(buf[i]);
+        if (v > peak) peak = v;
+        sumSq += v * v;
+      }
+      const rms = Math.sqrt(sumSq / len);
+      return peak * 0.65 + rms * 0.55;
+    } else {
+      const u8 = new Uint8Array(an.fftSize || 256);
+      an.getByteTimeDomainData(u8);
+      let peak = 0;
+      let sumSq = 0;
+      for (let i = 0; i < u8.length; i++) {
+        const v = Math.abs(u8[i] - 128) / 128;
+        if (v > peak) peak = v;
+        sumSq += v * v;
+      }
+      const rms = Math.sqrt(sumSq / u8.length);
+      return peak * 0.65 + rms * 0.55;
+    }
+  }
+
+  function meterLoop() {
+    try {
+      if (tapeDeck && !tapeDeck.hidden) {
+        ensureAudio();
+
+        let rawAmpL = 0;
+        let rawAmpR = 0;
+
+        const isRunning = (ac && ac.state === "running") || (window.audioCtx && window.audioCtx.state === "running");
+
+        if (isRunning) {
+          rawAmpL = getAnalyserAmp(vuAnalyserL || window.audioAnalyser, vuFloatL);
+          rawAmpR = getAnalyserAmp(vuAnalyserR || window.audioAnalyser, vuFloatR);
+        }
+
+        const targetL = amplitudeToRatio(rawAmpL);
+        const targetR = amplitudeToRatio(rawAmpR);
+
+        // Fast attack, smooth analog ballistic decay (~350ms)
+        curL = Math.max(targetL, curL * 0.85);
+        curR = Math.max(targetR, curR * 0.85);
+
+        renderLEDCanvas(curL, curR);
+      }
+    } catch (_) {}
+    requestAnimationFrame(meterLoop);
+  }
+  requestAnimationFrame(meterLoop);
+  const tapeDurationLimit = $("tapeDurationLimit");
+  const tapeRecBtn = $("tapeRecBtn");
+  const tapeStopBtn = $("tapeStopBtn");
+  const tapeDiscardBtn = $("tapeDiscardBtn");
+  const tapeDownloadBtn = $("tapeDownloadBtn");
+  const tapeHint = $("tapeHint");
+
+  let recChunksL = null;
+  let recChunksR = null;
+  let recTotalSamples = 0;
+  let recSampleRate = 44100;
+  let recStartTime = 0;
+  let recTimerInterval = null;
+  let currentBlob = null;
+  let currentBlobUrl = null;
+  let tapeState = "idle"; // "idle" | "recording" | "stopped"
+  let pendingStopResolve = null;
+
+  window.onTapeWorkletMessage = (m) => {
+    if (m.type === "rec_chunk") {
+      if (tapeState === "recording" || pendingStopResolve) {
+        recChunksL.push(m.left);
+        recChunksR.push(m.right);
+        recTotalSamples += m.left.length;
+
+        const bytes = recTotalSamples * 4;
+        const mb = (bytes / (1024 * 1024)).toFixed(1);
+        tapeSizeEl.textContent = mb + " MB";
+      }
+      if (m.final && pendingStopResolve) {
+        const resolve = pendingStopResolve;
+        pendingStopResolve = null;
+        resolve();
+      }
+    } else if (m.type === "rec_done") {
+      if (pendingStopResolve) {
+        const resolve = pendingStopResolve;
+        pendingStopResolve = null;
+        resolve();
+      }
+    }
+  };
+
+  function updateTapeState(state) {
+    tapeState = state;
+    tapeDeck.classList.toggle("recording", state === "recording");
+    tapeBtn.classList.toggle("recording", state === "recording");
+    if (tapeRecBadge) tapeRecBadge.hidden = state !== "recording";
+
+    if (state === "idle") {
+      tapeRecBtn.disabled = false;
+      tapeStopBtn.disabled = true;
+      tapeDiscardBtn.disabled = true;
+      tapeDownloadBtn.disabled = true;
+      tapeDownloadBtn.innerHTML = '<svg class="ctrl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Download WAV</span>';
+      const isRunning = window.audioCtx && window.audioCtx.state === "running";
+      tapeHint.textContent = isRunning
+        ? "Press Record to capture your session in pristine lossless WAV."
+        : "Synth is switched off. Click 'Switch on' to play and record.";
+      tapeDurationLimit.disabled = false;
+    } else if (state === "recording") {
+      tapeRecBtn.disabled = true;
+      tapeStopBtn.disabled = false;
+      tapeDiscardBtn.disabled = true;
+      tapeDownloadBtn.disabled = true;
+      tapeDurationLimit.disabled = true;
+      tapeHint.textContent = "● Recording session... Press Stop when finished.";
+    } else if (state === "stopped") {
+      tapeRecBtn.disabled = false;
+      tapeStopBtn.disabled = true;
+      tapeDiscardBtn.disabled = false;
+      tapeDownloadBtn.disabled = false;
+      tapeDurationLimit.disabled = false;
+      const bytes = recTotalSamples * 4;
+      const mb = (bytes / (1024 * 1024)).toFixed(1);
+      tapeDownloadBtn.innerHTML = `<svg class="ctrl-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg><span>Download WAV (${mb} MB)</span>`;
+      tapeHint.textContent = "Recording ready! Click Download WAV to save, or Discard to reset.";
+    }
+  }
+
+  function formatTime(totalSeconds) {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  }
+
+  function encodeWAV(chunksL, chunksR, sampleRate) {
+    let totalSamples = 0;
+    for (let i = 0; i < chunksL.length; i++) totalSamples += chunksL[i].length;
+
+    const numChannels = 2;
+    const bytesPerSample = 2;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = totalSamples * blockAlign;
+
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    // RIFF chunk descriptor
+    view.setUint32(0, 0x52494646, false); // "RIFF"
+    view.setUint32(4, 36 + dataSize, true);
+    view.setUint32(8, 0x57415645, false); // "WAVE"
+
+    // "fmt " sub-chunk
+    view.setUint32(12, 0x666d7420, false);
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, 16, true);
+
+    // "data" sub-chunk
+    view.setUint32(36, 0x64617461, false);
+    view.setUint32(40, dataSize, true);
+
+    // Interleave left and right channels to 16-bit PCM
+    let offset = 44;
+    for (let c = 0; c < chunksL.length; c++) {
+      const l = chunksL[c];
+      const r = chunksR[c];
+      for (let i = 0; i < l.length; i++) {
+        let sl = Math.max(-1, Math.min(1, l[i]));
+        let sr = Math.max(-1, Math.min(1, r[i]));
+        view.setInt16(offset, sl < 0 ? sl * 0x8000 : sl * 0x7FFF, true);
+        offset += 2;
+        view.setInt16(offset, sr < 0 ? sr * 0x8000 : sr * 0x7FFF, true);
+        offset += 2;
+      }
+    }
+
+    return new Blob([buffer], { type: "audio/wav" });
+  }
+
+  function onBeforeUnload(e) {
+    if (tapeState === "recording") {
+      e.preventDefault();
+      e.returnValue = "A recording is in progress on AURA-1. Are you sure you want to leave?";
+      return e.returnValue;
+    }
+  }
+
+  async function startRecord() {
+    const ac = window.audioCtx || (node && node.context);
+    if (!ac || !node) {
+      if (typeof showAlert === "function") showAlert("Please switch on the FM-1 first (click 'Switch on') before recording.");
+      return;
+    }
+    if (ac.state === "suspended") await ac.resume();
+
+    // Clean up previous tape if any
+    discardTape();
+
+    recChunksL = [];
+    recChunksR = [];
+    recTotalSamples = 0;
+    recSampleRate = ac.sampleRate;
+    recStartTime = performance.now();
+
+    if (tapeSub) tapeSub.textContent = `16-Bit Lossless · ${recSampleRate} Hz`;
+
+    // Start lossless audio capture in AudioWorklet thread
+    node.port.postMessage({ type: "rec_start" });
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    clearInterval(recTimerInterval);
+    recTimerInterval = setInterval(() => {
+      if (tapeState !== "recording") return;
+      const elapsedSec = Math.floor((performance.now() - recStartTime) / 1000);
+      tapeTimerEl.textContent = formatTime(elapsedSec);
+
+      const limit = parseInt(tapeDurationLimit.value, 10);
+      const hardCap = 3600; // 60 min safety limit
+      const maxSec = limit > 0 ? limit : hardCap;
+      if (elapsedSec >= maxSec) stopRecord();
+    }, 500);
+
+    updateTapeState("recording");
+  }
+
+  async function stopRecord() {
+    if (tapeState !== "recording") return;
+
+    window.removeEventListener("beforeunload", onBeforeUnload);
+    clearInterval(recTimerInterval);
+    recTimerInterval = null;
+
+    // Ask AudioWorklet to stop recording and flush remaining samples
+    if (node) {
+      await new Promise((resolve) => {
+        pendingStopResolve = resolve;
+        node.port.postMessage({ type: "rec_stop" });
+        setTimeout(resolve, 350);
+      });
+    }
+
+    if (recTotalSamples > 0 && recChunksL && recChunksL.length > 0) {
+      currentBlob = encodeWAV(recChunksL, recChunksR, recSampleRate);
+      currentBlobUrl = URL.createObjectURL(currentBlob);
+      window.__currentBlobUrl = currentBlobUrl;
+      // Immediately free raw chunk arrays
+      recChunksL = null;
+      recChunksR = null;
+
+      updateTapeState("stopped");
+    } else {
+      updateTapeState("idle");
+    }
+  }
+
+  function downloadTape() {
+    if (!currentBlobUrl) return;
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = currentBlobUrl;
+
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = String(now.getHours()).padStart(2, "0") + String(now.getMinutes()).padStart(2, "0");
+    a.download = `AURA-1_Recording_${dateStr}_${timeStr}.wav`;
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    tapeHint.textContent = `Downloaded: ${a.download}`;
+  }
+
+  function discardTape() {
+    if (currentBlobUrl) {
+      URL.revokeObjectURL(currentBlobUrl);
+      currentBlobUrl = null;
+    }
+    currentBlob = null;
+    recChunksL = null;
+    recChunksR = null;
+    recTotalSamples = 0;
+    curL = 0; curR = 0;
+    renderLEDCanvas(0, 0);
+    tapeTimerEl.textContent = "00:00";
+    tapeSizeEl.textContent = "0.0 MB";
+    updateTapeState("idle");
+  }
+
+  function updateDropdownPlacement() {
+    if (!tapeDeck || tapeDeck.hidden) return;
+    const btnRect = tapeBtn.getBoundingClientRect();
+    const deckWidth = 350;
+    const gap = 12;
+    const margin = 16;
+    const spaceRightOfBtn = window.innerWidth - btnRect.right;
+    const spaceRightOfBtnLeft = window.innerWidth - btnRect.left;
+
+    tapeDeck.classList.remove("pos-side-right", "pos-below-left", "pos-below-right");
+    tapeDeck.style.right = "";
+
+    if (spaceRightOfBtn >= deckWidth + gap + margin) {
+      // 1. If there is space to the right of the button: open directly on the right side!
+      tapeDeck.classList.add("pos-side-right");
+    } else if (spaceRightOfBtnLeft >= deckWidth + margin) {
+      // 2. Open below, expanding to the right
+      tapeDeck.classList.add("pos-below-left");
+    } else {
+      // 3. Fallback: open below, expanding to the left, but shift into the right viewport margin if available to clear synth
+      tapeDeck.classList.add("pos-below-right");
+      if (spaceRightOfBtn > margin) {
+        const shiftRight = Math.min(spaceRightOfBtn - margin, deckWidth - 40);
+        if (shiftRight > 10) {
+          tapeDeck.style.right = `-${Math.round(shiftRight)}px`;
+        }
+      }
+    }
+  }
+
+  window.onAudioStarted = function() {
+    if (tapeState === "idle" && tapeHint) {
+      tapeHint.textContent = "Press Record to capture your session in pristine lossless WAV.";
+    }
+  };
+
+  function toggleTapeDeck(force) {
+    const isHidden = typeof force === "boolean" ? !force : !tapeDeck.hidden;
+    tapeDeck.hidden = isHidden;
+    tapeBtn.classList.toggle("active", !isHidden);
+    tapeBtn.setAttribute("aria-expanded", String(!isHidden));
+    if (!isHidden) {
+      updateDropdownPlacement();
+      if (tapeState === "idle" && tapeHint) {
+        const isRunning = window.audioCtx && window.audioCtx.state === "running";
+        tapeHint.textContent = isRunning
+          ? "Press Record to capture your session in pristine lossless WAV."
+          : "Synth is switched off. Click 'Switch on' to play and record.";
+      }
+    }
+  }
+
+  window.updateTapeDropdownPlacement = updateDropdownPlacement;
+  window.addEventListener("resize", updateDropdownPlacement);
+
+  // UI Event bindings: Dropdown toggle, outside click, & keyboard controls
+  tapeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleTapeDeck();
+  });
+  tapeClose.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleTapeDeck(false);
+  });
+  tapeDeck.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
+  tapeRecBtn.addEventListener("click", startRecord);
+  tapeStopBtn.addEventListener("click", stopRecord);
+  tapeDiscardBtn.addEventListener("click", discardTape);
+  tapeDownloadBtn.addEventListener("click", downloadTape);
+
+  // Keyboard shortcuts: 'R' or 'T' toggles Recording, 'Escape' closes it
+  window.addEventListener("keydown", (e) => {
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")) return;
+    if (e.key === "r" || e.key === "R" || e.key === "t" || e.key === "T") {
+      toggleTapeDeck();
+    } else if (e.key === "Escape" && !tapeDeck.hidden) {
+      toggleTapeDeck(false);
+      tapeBtn.focus();
+    }
+  });
+
+  updateTapeState("idle");
+})();
+</script>
+<div class="app-version" id="app-version">AURA-1 v1.0</div>
+<div id="pwa-toast" class="pwa-toast" role="alert">
+  <div class="pwa-toast-text">
+    <strong>Update available</strong>
+    <span>A new version of AURA-1 is ready</span>
+  </div>
+  <button id="pwa-reload-btn" type="button" onclick="reloadApp()">Reload</button>
+</div>
+<script src="assets/studio-controls.js"></script>
+</body>
+</html>

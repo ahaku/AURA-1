@@ -55,6 +55,6 @@ expect store_writes 1
 reboot
 wait 300
 expect piece 6
-turn PRESET 2
+turn PRESET -6
 expect piece 0
 expect par1 70

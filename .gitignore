@@ -1,6 +1,25 @@
 build/
+/emu/
+/install/
 .DS_Store
 __pycache__/
 *.o
+*.wasm
 .serena/
 docs/superpowers/
+/app/web/emu/img/
+/web/emu/img/
+scratch/
+
+# Bootloader assets copied from base/ by tools/make_installer.py
+/firmware/m-bootloader-*
+
+# Local credentials and development environments
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+node_modules/
+playwright-report/
+test-results/

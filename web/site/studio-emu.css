@@ -1,0 +1,1096 @@
+/* The instrument keeps its original panel; the studio surrounds it. */
+:root {
+  --ground: #f2f0e7;
+  --ink: #242820;
+  --muted: #5f6556;
+  --rule: #d6d8cb;
+  --accent: #465631;
+  --river: #465631;
+  --river-2: #7c8e58;
+  --green-1: #b9c88b;
+  --card: #f8f7ef;
+  --focus: #72864e;
+  --bad: #943c28;
+  --teal: #465631;
+  color-scheme: light;
+}
+:root[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  --ground: #f2f0e7;
+  --ink: #242820;
+  --muted: #5f6556;
+  --rule: #d6d8cb;
+  --accent: #465631;
+  --river: #465631;
+  --river-2: #7c8e58;
+  --card: #f8f7ef;
+  --focus: #72864e;
+  --bad: #943c28;
+  color-scheme: light;
+}
+body.studio-emu {
+  background: var(--paper);
+  background-image: none;
+  color: var(--ink);
+  padding: 0;
+  font-family: Manrope, Arial, sans-serif;
+}
+.studio-emu .studio-header {
+  max-width: 1320px;
+  padding: 26px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  gap: 32px;
+  align-items: center;
+}
+.studio-emu .studio-header nav {
+  align-items: center;
+  gap: 30px;
+}
+.studio-emu .studio-header nav a {
+  color: var(--ink);
+  font-family: Manrope, Arial, sans-serif;
+  font-weight: 600;
+}
+.studio-emu .studio-header .studio-brand {
+  color: var(--ink);
+  font-size: 25px;
+}
+.studio-emu .instrument-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 45px 0 65px;
+}
+.instrument-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 25px;
+  margin-bottom: 27px;
+}
+.instrument-heading h1 {
+  font:
+    500 clamp(33px, 4vw, 51px)/1.12 Manrope,
+    Arial,
+    sans-serif;
+  letter-spacing: -0.05em;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+.instrument-heading p:not(.section-kicker) {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0;
+}
+.instrument-heading .section-kicker {
+  margin: 0 0 12px;
+  font:
+    600 11px Manrope,
+    Arial,
+    sans-serif;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  position: relative;
+  z-index: 25;
+}
+.studio-emu .zen-btn,
+.studio-emu .tape-btn {
+  min-height: 43px;
+  padding: 10px 14px;
+  font:
+    600 12px Manrope,
+    Arial,
+    sans-serif;
+  letter-spacing: 0;
+  color: var(--ink);
+  border: 1px solid #bac3a9;
+  background: transparent;
+  border-radius: 5px;
+  box-shadow: none;
+  transition: background 0.18s;
+}
+.studio-emu .zen-btn:hover,
+.studio-emu .tape-btn:hover {
+  background: #e1e6d1;
+  color: var(--ink);
+  border-color: #8d9c73;
+  box-shadow: none;
+}
+.studio-emu .tape-btn.recording {
+  color: #8f3725;
+  background: #f2e1d5;
+  border-color: #c4896c;
+}
+.studio-emu .tape-deck-dropdown,
+.studio-emu .tape-deck-modal {
+  --ink: #e5ecd8;
+  --muted: #b4bfa7;
+  --accent: #b9c88b;
+  background: #1c241d;
+  color: #e5ecd8;
+  border-color: #6b7b59;
+  backdrop-filter: none;
+  font: 400 12px/1.5 Manrope, Arial, sans-serif;
+  letter-spacing: 0;
+  box-shadow: 0 18px 55px #141a1830;
+}
+.studio-emu .tape-deck-dropdown::before,
+.studio-emu .tape-deck-modal::before {
+  content: none;
+  display: none;
+}
+.studio-emu .tape-title-group {
+  gap: 4px;
+}
+.studio-emu .tape-title-text {
+  font: 600 15px/1.3 Manrope, Arial, sans-serif;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+.studio-emu .tape-sub-badge {
+  font: 400 10px/1.4 Manrope, Arial, sans-serif;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+.studio-emu .tape-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font: 400 20px/1 Manrope, Arial, sans-serif;
+}
+.studio-emu .tape-status-row .status-label {
+  font: 500 10px/1.3 Manrope, Arial, sans-serif;
+  letter-spacing: 0.04em;
+}
+.studio-emu .tape-status-row .status-val {
+  font: 600 15px/1.3 Manrope, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.studio-emu .vu-db-text {
+  font: 500 8px/1.3 Manrope, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+.studio-emu .tape-controls-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.studio-emu .tape-ctrl-btn {
+  width: 100%;
+  height: 34px;
+  min-width: 0;
+  padding: 0 4px;
+  gap: 4px;
+  font: 600 10px/1.3 Manrope, Arial, sans-serif;
+  letter-spacing: 0;
+}
+.studio-emu .tape-ctrl-btn span {
+  line-height: inherit;
+  white-space: nowrap;
+}
+.studio-emu .tape-ctrl-btn .ctrl-icon {
+  width: 13px;
+  height: 13px;
+}
+.studio-emu .tape-limit-row {
+  font: 400 11px/1.5 Manrope, Arial, sans-serif;
+}
+.studio-emu .tape-limit-row select {
+  font: 500 11px/1.4 Manrope, Arial, sans-serif;
+}
+.studio-emu .tape-deck-dropdown .tape-hint-text {
+  font: 400 11px/1.55 Manrope, Arial, sans-serif;
+}
+.studio-emu .tape-deck-dropdown .tape-sub,
+.studio-emu .tape-deck-dropdown p {
+  color: #b4bfa7;
+}
+.studio-emu .tape-deck-dropdown button:focus-visible {
+  outline-color: #d0dcab;
+}
+.instrument-stage {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  border-radius: 16px;
+  overflow: hidden;
+  padding: 0;
+  min-width: 0;
+  box-shadow: none;
+}
+.studio-emu .devicebox {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+}
+.studio-emu .device {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  aspect-ratio: 1000/640;
+}
+.studio-emu .device canvas {
+  box-shadow: none;
+}
+.studio-emu .start {
+  z-index: 3;
+}
+.studio-emu #go {
+  font:
+    600 14px Manrope,
+    Arial,
+    sans-serif;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 5px;
+  padding: 14px 23px;
+  border: 1px solid #d2dfb1;
+  color: #202a1c;
+  background: #d2dfb1;
+  box-shadow: 0 5px 30px #0006;
+  min-height: 48px;
+  transition: background 0.2s;
+}
+.studio-emu #go:hover {
+  background: #e6edce;
+}
+.studio-emu .device #controls {
+  --focus: #d2dfb1;
+}
+.studio-emu #controls[data-input="pointer"] .hit:focus-visible {
+  outline: none;
+}
+.studio-emu .bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  padding: 20px 0;
+  margin: 0 0 20px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: var(--ink);
+  font:
+    12px/1.6 Manrope,
+    Arial,
+    sans-serif;
+}
+.studio-emu .bar #status {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0;
+  flex: 1 1 220px;
+}
+.studio-emu .bar #alert {
+  color: var(--bad);
+  font-size: 12px;
+}
+.studio-emu .bar button,
+.studio-emu .speak button {
+  min-height: 40px;
+  border: 1px solid #bac3a9;
+  background: transparent;
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 8px 13px;
+  font:
+    600 11px Manrope,
+    Arial,
+    sans-serif;
+  letter-spacing: 0;
+  box-shadow: none;
+  transition: background 0.2s;
+}
+.studio-emu .bar button:hover,
+.studio-emu .speak button:hover:not(:disabled) {
+  background: #e1e6d1;
+}
+.studio-emu .bar button[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.studio-emu .bar #reset {
+  margin-left: auto;
+  color: #6b4d3d;
+  font-weight: 400;
+  border-color: var(--line);
+}
+.studio-emu .bar label {
+  font-size: 11px;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.studio-emu .bar input {
+  accent-color: var(--sage-dark);
+}
+.studio-emu .cpu {
+  font-size: 10px;
+  color: var(--muted);
+}
+.studio-emu .help {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 32px;
+}
+.studio-emu .help > div,
+.studio-emu .speak {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+}
+.studio-emu .help h2,
+.studio-emu .speak h2 {
+  font:
+    600 16px/1.5 Manrope,
+    Arial,
+    sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+.studio-emu .help p,
+.studio-emu .help li {
+  font:
+    12px/1.85 Manrope,
+    Arial,
+    sans-serif;
+  color: var(--muted);
+}
+.studio-emu .help ul {
+  padding-left: 18px;
+}
+.studio-emu .help kbd {
+  font:
+    10px ui-monospace,
+    monospace;
+  border: 1px solid #c8cebb;
+  background: #e7eadc;
+  color: #465631;
+  border-radius: 3px;
+  padding: 2px 4px;
+  box-shadow: none;
+}
+.studio-emu .speak {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.studio-emu .speak summary {
+  min-height: 44px;
+  display: list-item;
+  color: var(--sage-dark);
+  cursor: pointer;
+}
+.studio-emu .speak summary h2 {
+  display: inline;
+  font-size: 13px;
+  color: var(--ink);
+}
+.studio-emu .speak fieldset {
+  border-color: var(--line);
+  margin-bottom: 15px;
+  padding: 14px;
+  font-size: 12px;
+}
+.studio-emu .speak legend {
+  color: var(--ink);
+}
+.studio-emu .speak label {
+  color: var(--muted);
+}
+.studio-emu .speak input {
+  appearance: none;
+  flex: 0 0 auto;
+  display: grid;
+  place-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border: 2px solid var(--muted);
+  border-radius: 50%;
+  background: #fff;
+}
+.studio-emu .speak input::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sage-dark);
+  transform: scale(0);
+}
+.studio-emu .speak input:checked {
+  border-color: var(--sage-dark);
+}
+.studio-emu .speak input:checked::before {
+  transform: scale(1);
+}
+.studio-emu .speak #said {
+  background: #e5e9d9;
+  color: var(--ink);
+  padding: 12px;
+  border: 1px solid #c8d0b5;
+  border-radius: 5px;
+  font-size: 13px;
+}
+.studio-emu .speak #said:empty {
+  display: none;
+}
+.studio-emu .speak button:disabled {
+  color: #717965;
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.studio-emu #pwa-toast {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  margin: 18px auto 0;
+  max-width: 1200px;
+  width: calc(100% - 48px);
+  padding: 14px 18px;
+  border: 1px solid #b9c797;
+  border-radius: 7px;
+  background: #e7edd9;
+  color: var(--ink);
+  box-shadow: none;
+  font:
+    12px/1.6 Manrope,
+    Arial,
+    sans-serif;
+  z-index: 10;
+}
+.studio-emu #pwa-toast strong {
+  color: var(--ink);
+}
+.studio-emu #pwa-toast small {
+  color: var(--muted);
+}
+.studio-emu #pwa-toast button {
+  min-height: 40px;
+  font:
+    600 11px Manrope,
+    Arial,
+    sans-serif;
+  background: var(--ink);
+  color: var(--paper);
+  border: 0;
+  border-radius: 4px;
+  padding: 9px 13px;
+  box-shadow: none;
+}
+.studio-emu #pwa-toast .toast-dismiss {
+  margin-left: 4px;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid #aebd93;
+}
+.studio-emu #app-version {
+  position: static;
+  font:
+    10px Manrope,
+    Arial,
+    sans-serif;
+  color: var(--muted);
+  padding: 0;
+  z-index: auto;
+  display: none;
+}
+.mobile-stage,
+.mobile-console {
+  display: none;
+}
+.studio-emu .zen-exit {
+  background: #18201de8;
+  color: #eff2e6;
+  border: 1px solid #6d7d62;
+  font:
+    600 12px Manrope,
+    Arial,
+    sans-serif;
+  letter-spacing: 0;
+  min-height: 44px;
+  border-radius: 5px;
+  box-shadow: none;
+}
+.studio-emu .zen-exit:hover {
+  background: #303d2a;
+  color: #fff;
+  border-color: #b9c88b;
+  box-shadow: none;
+}
+/* Embed is the real instrument, with its surrounding page removed. */
+html.embedded,
+html.embedded body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent !important;
+}
+html.embedded .studio-header,
+html.embedded .instrument-heading,
+html.embedded .bar,
+html.embedded .help,
+html.embedded .speak,
+html.embedded .skip,
+html.embedded .zen-exit,
+html.embedded #pwa-toast,
+html.embedded #panel-keys,
+html.embedded .mobile-console,
+html.embedded .mobile-stage {
+  display: none !important;
+}
+html.embedded .instrument-main {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+html.embedded .instrument-stage {
+  width: 100%;
+  height: 100%;
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+html.embedded .devicebox {
+  display: flex !important;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+html.embedded .device {
+  width: min(100%, calc(92dvh * 1.5625));
+  min-width: 0;
+  max-width: none;
+}
+html.embedded #start {
+  display: none !important;
+}
+html.embedded .device:focus-within {
+  outline: none;
+}
+/* Full-screen listening keeps the instrument centred. */
+html.zen,
+html.zen body {
+  overflow: hidden;
+  height: 100%;
+}
+html.zen body.studio-emu {
+  padding: 0;
+  background: var(--paper);
+  display: block;
+}
+html.zen .studio-header,
+html.zen .instrument-heading,
+html.zen .mobile-console,
+html.zen .mobile-stage,
+html.zen #pwa-toast {
+  display: none !important;
+}
+html.zen .instrument-main {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+  display: block;
+}
+html.zen .instrument-stage {
+  --zen-top: max(12px, env(safe-area-inset-top));
+  --zen-bottom: max(12px, env(safe-area-inset-bottom));
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  border-radius: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--zen-top) max(12px, env(safe-area-inset-right))
+    var(--zen-bottom) max(12px, env(safe-area-inset-left));
+}
+html.zen .devicebox {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+html.zen .device {
+  width: min(100%, calc((100dvh - var(--zen-top) - var(--zen-bottom)) * 1.5625));
+  max-width: none;
+  min-width: 0;
+  aspect-ratio: 1000/640;
+}
+.studio-emu html.zen .bar {
+  display: none;
+}
+@media (min-width: 1421px) {
+  .studio-emu .studio-header {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+@media (max-width: 1320px) {
+  .studio-emu .instrument-main {
+    margin-left: 40px;
+    margin-right: 40px;
+  }
+  .studio-emu #pwa-toast {
+    width: calc(100% - 80px);
+  }
+}
+@media (max-width: 850px) {
+  .studio-emu .studio-header {
+    padding: 18px 0;
+  }
+  .studio-emu .studio-header nav {
+    gap: 23px;
+  }
+  .studio-emu .instrument-main {
+    margin-left: 24px;
+    margin-right: 24px;
+    padding-top: 32px;
+  }
+  .instrument-heading {
+    align-items: start;
+    gap: 20px;
+  }
+  .instrument-heading h1 {
+    font-size: 38px;
+  }
+  .instrument-heading p:not(.section-kicker) {
+    font-size: 12px;
+  }
+  .toolbar-actions {
+    flex-wrap: wrap;
+    justify-content: end;
+  }
+  .studio-emu .zen-btn,
+  .studio-emu .tape-btn {
+    padding: 10px 11px;
+    font-size: 11px;
+  }
+  .instrument-stage {
+    padding: 0;
+  }
+  .studio-emu #pwa-toast {
+    width: calc(100% - 48px);
+  }
+}
+@media (max-width: 700px) {
+  .studio-emu .instrument-main {
+    padding-top: 28px;
+  }
+  .instrument-heading {
+    display: block;
+  }
+  .toolbar-actions {
+    margin-top: 20px;
+    justify-content: start;
+  }
+  .instrument-heading h1 {
+    font-size: 37px;
+  }
+  .instrument-stage {
+    padding: 0;
+    border-radius: 12px;
+  }
+  .studio-emu .devicebox {
+    display: none;
+  }
+  .mobile-stage {
+    display: grid;
+    justify-items: center;
+    gap: 20px;
+    position: relative;
+    z-index: 2;
+  }
+  .mobile-stage canvas {
+    width: 240px;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+    border: 10px solid #0e1319;
+    border-radius: 16px;
+    box-shadow: none;
+    background: #f4f3d5;
+  }
+  .mobile-stage .studio-button {
+    background: #cbd9a7;
+    color: #242d1e !important;
+    border-color: #cbd9a7;
+    min-width: 180px;
+  }
+  .mobile-stage .studio-button[hidden] {
+    display: none;
+  }
+  .mobile-console {
+    display: block;
+    margin: 22px 0 0;
+  }
+  .mobile-console[inert] {
+    opacity: 0.55;
+  }
+  .touch-selectors {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 9px;
+    margin-bottom: 20px;
+  }
+  .touch-selectors .touch-dial {
+    padding: 12px 9px;
+    background: #e9ecdf;
+  }
+  .touch-dial {
+    border: 1px solid #c8cebb;
+    border-radius: 6px;
+    min-width: 0;
+    padding: 14px;
+    background: #f7f6ed;
+  }
+  .touch-dial label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .touch-dial .dial-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .touch-dial button {
+    min-height: 44px;
+    border: 1px solid #bbc4a9;
+    color: var(--sage-dark);
+    background: var(--paper);
+    border-radius: 4px;
+    font-size: 21px;
+    touch-action: none;
+  }
+  .touch-dial button:active {
+    background: #cdd8ae;
+  }
+  .touch-parameters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .touch-transport {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .touch-pages {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .touch-press {
+    min-height: 46px;
+    border: 1px solid #bcc7a8;
+    background: #e9eddc;
+    color: #3a492c;
+    border-radius: 5px;
+    font:
+      600 11px Manrope,
+      Arial,
+      sans-serif;
+    touch-action: none;
+    padding: 8px 5px;
+  }
+  .touch-press:active,
+  .touch-press.is-held,
+  .touch-press.is-lit {
+    background: #45582f;
+    border-color: #45582f;
+    color: #f3f4e6;
+  }
+  .touch-pages .touch-press {
+    background: transparent;
+    font-weight: 500;
+  }
+  .touch-pages .touch-press.is-lit,
+  .touch-pages .touch-press:active {
+    background: #d3ddba;
+    color: #28381b;
+  }
+  .touch-notes {
+    border-top: 1px solid var(--line);
+    padding-top: 17px;
+  }
+  .touch-notes h2 {
+    font:
+      600 13px Manrope,
+      Arial,
+      sans-serif;
+    letter-spacing: -0.015em;
+    margin: 0 0 7px;
+    color: var(--ink);
+  }
+  .touch-notes p {
+    font:
+      11px/1.7 Manrope,
+      Arial,
+      sans-serif;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .touch-key-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .touch-key-grid button {
+    min-height: 48px;
+    background: #f8f7ef;
+    border: 1px solid #c5ccb6;
+    border-radius: 5px;
+    font:
+      500 12px Manrope,
+      Arial,
+      sans-serif;
+    color: var(--ink);
+    touch-action: none;
+  }
+  .touch-key-grid button.sharp {
+    background: #e1e5d4;
+  }
+  .touch-key-grid button.is-lit,
+  .touch-key-grid button:active,
+  .touch-key-grid button.is-held {
+    background: #b9c88b;
+    border-color: #859957;
+    color: #25311c;
+  }
+  .studio-emu .bar {
+    gap: 9px 15px;
+    padding: 18px 0;
+    font-size: 11px;
+  }
+  .studio-emu .bar #status {
+    flex-basis: calc(100% - 80px);
+  }
+  .studio-emu .bar #reset {
+    margin-left: 0;
+    font-size: 10px;
+  }
+  .studio-emu .help {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    margin-top: 25px;
+  }
+  .studio-emu .speak fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .studio-emu .speak label {
+    min-height: 30px;
+  }
+  .touch-volume {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 20px 0;
+  }
+  .touch-volume input {
+    width: 100%;
+    accent-color: var(--sage-dark);
+  }
+  .studio-emu #pwa-toast {
+    flex-wrap: wrap;
+    font-size: 11px;
+  }
+  .studio-emu .tape-deck-dropdown,
+  .studio-emu .tape-deck-modal {
+    max-width: calc(100vw - 40px);
+    font-size: 12px;
+  }
+  .studio-emu .bar .cpu {
+    font-size: 9px;
+  }
+  html.embedded .devicebox {
+    display: flex !important;
+  }
+  html.embedded .instrument-stage {
+    padding: 18px;
+  }
+  html.zen .devicebox {
+    display: flex !important;
+  }
+}
+@media (max-width: 480px) {
+  .studio-emu .studio-header {
+    margin-left: 20px;
+    margin-right: 20px;
+    padding: 12px 0;
+  }
+  .studio-emu .studio-header nav {
+    gap: 19px;
+  }
+  .studio-emu .instrument-main {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+  .studio-emu .studio-header .studio-brand {
+    font-size: 23px;
+  }
+  .studio-emu .studio-header nav a {
+    font-size: 12px;
+  }
+  .instrument-heading h1 {
+    font-size: 35px;
+  }
+  .studio-emu #pwa-toast {
+    width: calc(100% - 40px);
+  }
+  .touch-selectors {
+    gap: 7px;
+  }
+  .touch-selectors .touch-dial {
+    padding: 11px 7px;
+  }
+  .touch-dial label {
+    font-size: 10px;
+  }
+  .mobile-stage canvas {
+    width: 240px;
+  }
+  .touch-key-grid button {
+    min-height: 45px;
+  }
+}
+@media (max-width: 369px) {
+  .touch-key-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .touch-selectors {
+    grid-template-columns: 1fr;
+  }
+  .touch-selectors .touch-dial {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .touch-selectors .dial-buttons {
+    min-width: 120px;
+  }
+  .touch-selectors label {
+    margin: 0;
+  }
+  .touch-transport,
+  .touch-pages {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+html.embedded body:not(.instrument-on) #screen {
+  background: #f4f3d5 url("../img/screen-garden.png") center/cover no-repeat;
+}
+.studio-emu #pwa-toast .pwa-toast-text span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (max-width: 700px) {
+  .mobile-console {
+    min-height: 1080px;
+  }
+}
+@media (max-width: 369px) {
+  .mobile-console {
+    min-height: 1360px;
+  }
+}
+
+@media (max-width: 700px) {
+  .touch-readout {
+    position: sticky;
+    top: 10px;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-height: 88px;
+    margin-bottom: 18px;
+    padding: 11px;
+    background: #e8ebdc;
+    border: 1px solid #c3cda9;
+    border-radius: 6px;
+    box-shadow: 0 6px 18px #26351912;
+  }
+  .touch-readout canvas {
+    display: block;
+    width: 64px;
+    height: 64px;
+    image-rendering: pixelated;
+    border: 3px solid #242820;
+    border-radius: 5px;
+    background: #f4f3d5;
+  }
+  .touch-readout p {
+    font:
+      11px/1.6 Manrope,
+      Arial,
+      sans-serif;
+    color: #39482b;
+    margin: 0;
+    max-height: 54px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  .mobile-console button,
+  .mobile-console input {
+    scroll-margin-top: 120px;
+  }
+}

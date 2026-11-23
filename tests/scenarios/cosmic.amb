@@ -1,0 +1,40 @@
+# Cosmic Visualizer toggle and interaction test (Hold HOME)
+wait 200
+expect cosmic 0
+expect solo 0
+
+# Test activating Cosmic Visualizer via long press of HOME (800ms)
+press HOME
+wait 850
+release HOME
+wait 50
+expect cosmic 1
+expect solo 0
+
+# Test exiting Cosmic Visualizer via long press of HOME
+press HOME
+wait 850
+release HOME
+wait 50
+expect cosmic 0
+
+# Enter Solo mode
+tap SEL
+wait 50
+expect solo 1
+
+# Enter Cosmic Visualizer while in Solo mode
+press HOME
+wait 850
+release HOME
+wait 50
+expect cosmic 1
+expect solo 1
+
+# Exit Cosmic Visualizer via long press of HOME: Solo mode must be preserved!
+press HOME
+wait 850
+release HOME
+wait 50
+expect cosmic 0
+expect solo 1

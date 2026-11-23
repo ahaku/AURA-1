@@ -6,18 +6,31 @@
 
 #if defined EN_HOST || defined PLAT_HOST
 #define EN_POOL
+typedef float delay_sample_t;
+static inline float delay_read(delay_sample_t x) { return x; }
+static inline delay_sample_t delay_write(float x) { return x; }
 #else
 #define EN_POOL __attribute__((section(".pool")))
+/* The FM-1 stores the cloud and plate delay lines as signed Q14 samples.
+ * The filters still run in float, with room for peaks up to twice full scale. */
+typedef int16_t delay_sample_t;
+static inline float delay_read(delay_sample_t x) { return (float)x * (1.0f / 16384.0f); }
+static inline delay_sample_t delay_write(float x)
+{
+    float scaled = x * 16384.0f;
+    return (delay_sample_t)(scaled > 32767.0f ? 32767.0f : scaled < -32768.0f ? -32768.0f : scaled);
+}
 #endif
 #define BARRIER() __asm__ volatile("" ::: "memory")
 
 const char *const EN_NOTE_NAME[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 const char *const EN_MODE_NAME[EN_NMODES] = {"Ionian", "Dorian", "Phrygian", "Lydian", "Mixolyd.", "Aeolian",
-                                             "Pent maj", "Pent min"};
+                                             "Pent maj", "Pent min", "Hirajoshi", "Insen", "WholeTone", "Lydian Dominant"};
 #define B(a, b, c, d, e, f, g) (1u << (a) | 1u << (b) | 1u << (c) | 1u << (d) | 1u << (e) | 1u << (f) | 1u << (g))
 const uint16_t EN_MODE_POOL[EN_NMODES] = {
     B(0, 2, 4, 5, 7, 9, 11), B(0, 2, 3, 5, 7, 9, 10), B(0, 1, 3, 5, 7, 8, 10), B(0, 2, 4, 6, 7, 9, 11),
-    B(0, 2, 4, 5, 7, 9, 10), B(0, 2, 3, 5, 7, 8, 10), B(0, 2, 4, 7, 9, 9, 9),  B(0, 3, 5, 7, 10, 10, 10)};
+    B(0, 2, 4, 5, 7, 9, 10), B(0, 2, 3, 5, 7, 8, 10), B(0, 2, 4, 7, 9, 9, 9),  B(0, 3, 5, 7, 10, 10, 10),
+    B(0, 2, 3, 7, 8, 8, 8),  B(0, 1, 5, 7, 10, 10, 10), B(0, 2, 4, 6, 8, 10, 10), B(0, 2, 4, 6, 7, 9, 10)};
 #undef B
 const uint8_t EN_LOOP_LEN[EN_NLOOP] = {13, 17, 23, 29};
 const uint8_t EN_DRUM_N[EN_NDRUM] = {16, 12, 7};
@@ -31,6 +44,8 @@ static const en_param_t PARAMS[P_NPARAMS] = {
     {"Mode", 0, EN_NMODES - 1, 1}, {"Bell oct", -2, 2, 0}, {"Pad tone", 0, 1, 0},
     {"Bass oct", -1, 1, 0},   {"Glide", 0, 100, 20},    {"Fifth", 0, 100, 35},
     {"Swing", 0, 100, 0},     {"Hats", 0, 100, 50},
+    {"Text vol", 0, 100, 0},  {"Text type", 0, 4, 0},   {"Text tone", 0, 100, 50}, {"Text dens", 0, 100, 50},
+    {"Bowls vol", 0, 100, 0}, {"Bowls mode", 0, 3, 0}, {"Bowls oct", -1, 1, 0}, {"Bowls blur", 0, 100, 35},
 };
 const en_param_t *en_param_info(int i) { return (i >= 0 && i < P_NPARAMS) ? &PARAMS[i] : &PARAMS[0]; }
 
@@ -42,14 +57,22 @@ static const struct {
     const char *name;
     int8_t v[P_NPARAMS];
 } PIECES[EN_NPIECES] = {
-    {"Garden",       {60, 65, 45, 40, 40, 35, 25, 35, 45, 3, 65, 80, 40, 60, 50, 50, 0, 1, 72, 2, 1, 0, 0, 0, 20, 35, 0, 50}},
-    {"Departures",   {35, 75, 0, 0, 35, 30, 40, 0, 30, 3, 70, 85, 20, 55, 5, 40, 0, 1, 60, 1, 0, -1, 0, 0, 30, 25, 0, 40}},
-    {"Voices",       {85, 0, 25, 0, 30, 30, 50, 0, 20, 5, 80, 90, 67, 70, 30, 55, 0, 1, 56, 5, 5, 0, 1, -1, 45, 30, 0, 40}},
-    {"Afternoon",    {50, 65, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 65}},
-    {"Night Bus",    {45, 55, 55, 60, 45, 50, 15, 55, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 70}},
-    {"Shoreline",    {40, 60, 30, 0, 30, 40, 40, 0, 85, 4, 55, 95, 30, 80, 0, 85, 0, 1, 64, 4, 6, 0, 0, 0, 40, 20, 0, 30}},
-    {"Glass",        {35, 80, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 85}},
-    {"Tides",        {55, 60, 40, 35, 45, 75, 10, 40, 50, 3, 65, 85, 60, 60, 55, 95, 0, 1, 70, 10, 4, 0, 1, 0, 25, 55, 10, 50}},
+    {"Garden",       {60, 65, 45, 40, 40, 35, 25, 35, 45, 3, 65, 80, 40, 60, 50, 50, 0, 1, 72, 2, 1, 0, 0, 0, 20, 35, 0, 50, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Departures",   {35, 75, 0, 0, 35, 30, 40, 0, 30, 3, 70, 85, 20, 55, 5, 40, 0, 1, 60, 1, 0, -1, 0, 0, 30, 25, 0, 40, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Voices",       {85, 0, 25, 0, 30, 30, 50, 0, 20, 5, 80, 90, 67, 70, 30, 55, 0, 1, 56, 5, 5, 0, 1, -1, 45, 30, 0, 40, 0, 0, 50, 50,  20, 2, 0, 45}},
+    {"Afternoon",    {50, 65, 35, 25, 55, 45, 20, 30, 50, 2, 60, 75, 60, 50, 60, 55, 0, 1, 84, 7, 3, 0, 0, 0, 15, 40, 15, 65, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Night Bus",    {45, 55, 55, 60, 45, 50, 15, 55, 55, 1, 55, 70, 35, 40, 75, 70, 0, 1, 96, 9, 5, 0, 0, 0, 10, 45, 30, 70, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Shoreline",    {40, 60, 30, 0, 30, 40, 40, 0, 85, 4, 55, 95, 30, 80, 0, 85, 0, 1, 64, 4, 6, 0, 0, 0, 40, 20, 0, 30, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Glass",        {35, 80, 30, 20, 60, 55, 25, 25, 45, 2, 65, 80, 55, 45, 90, 50, 0, 1, 76, 3, 7, 1, 0, 1, 10, 30, 10, 85, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Tides",        {55, 60, 40, 35, 45, 75, 10, 40, 50, 3, 65, 85, 60, 60, 55, 95, 0, 1, 70, 10, 4, 0, 1, 0, 25, 55, 10, 50, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Dreamscape",   {65, 75, 50, 0, 45, 40, 40, 0, 70, 2, 75, 85, 50, 60, 12, 50, 0, 1, 68, 4, 1, 0, 0, 0, 30, 35, 0, 50, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Solaris",      {70, 65, 40, 0, 40, 50, 50, 0, 60, 3, 80, 90, 60, 70, 40, 65, 0, 1, 58, 5, 3, 1, 1, 0, 40, 45, 0, 50, 0, 0, 50, 50,  30, 2, -1, 60}},
+    {"Cassette",     {65, 55, 55, 30, 35, 45, 35, 25, 65, 1, 60, 65, 35, 55, 20, 85, 0, 1, 62, 6, 5, 0, 0, 0, 20, 40, 40, 25, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Rain",         {60, 70, 35, 0, 30, 45, 40, 0, 60, 3, 80, 92, 35, 75, 25, 45, 0, 1, 52, 2, 1, 1, 0, 0, 35, 40, 0, 30, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Pulsar",       {50, 65, 60, 60, 55, 35, 25, 45, 50, 2, 55, 70, 55, 45, 65, 50, 0, 1, 104, 0, 5, 0, 0, 0, 15, 50, 0, 70, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Bamboo",       {45, 75, 0, 0, 25, 40, 60, 0, 65, 4, 85, 95, 40, 85, 10, 40, 0, 1, 48, 9, 7, 0, 1, 0, 30, 0, 0, 0, 0, 0, 50, 50,  0, 0, 0, 35}},
+    {"Aurora",       {65, 70, 40, 0, 35, 45, 45, 0, 60, 3, 85, 95, 70, 70, 40, 70, 0, 1, 54, 4, 2, 2, 1, -1, 40, 40, 0, 0, 0, 0, 50, 50,  25, 1, -1, 60}},
+    {"Dusk",         {70, 50, 65, 20, 30, 35, 35, 25, 45, 2, 70, 75, 20, 65, 20, 40, 0, 1, 46, 10, 5, -1, 0, -1, 30, 35, 40, 40, 0, 0, 50, 50,  0, 0, 0, 35}},
 };
 
 const char *en_piece_name(int i) { return PIECES[(unsigned)i < EN_NPIECES ? i : 0].name; }
@@ -95,13 +118,22 @@ void en_param_text(int i, int v, char *b)
         s = ONOFF[v ? 1 : 0];
     else if (i == P_PADTONE)
         s = v ? "Voices" : "Rhodes";
+    else if (i == P_TEXT_TYPE) {
+        static const char *const TEXT_TYPES[5] = {"Rain", "Wind", "Vinyl", "Ocean", "Train"};
+        s = TEXT_TYPES[(unsigned)v < 5u ? v : 0];
+    }
     else if (i == P_MODE)
         s = EN_MODE_NAME[(unsigned)v < EN_NMODES ? v : 0];
     else if (i == P_ROOT)
         s = EN_NOTE_NAME[(unsigned)v < 12u ? v : 0];
+    else if (i == P_BOWLS_MODE) {
+        static const char *const DMODES[] = {"Root", "Sub", "Fifth", "Chord"};
+        s = (unsigned)v < 4 ? DMODES[v] : "Root";
+    }
     if (s) {
         int k = 0;
-        while (s[k] && k < 9) {
+        int max_len = (i == P_MODE) ? 15 : 9;
+        while (s[k] && k < max_len) {
             b[k] = s[k];
             k++;
         }
@@ -129,7 +161,7 @@ void en_param_text(int i, int v, char *b)
         *b = 0;
         return;
     }
-    if ((i == P_TUNE || i == P_BOCT || i == P_BASSOCT) && v > 0)
+    if ((i == P_TUNE || i == P_BOCT || i == P_BASSOCT || i == P_BOWLS_OCT) && v > 0)
         *b++ = '+';
     itoa_s(v, b);
 }
@@ -274,7 +306,8 @@ const char *en_chord_name(const int *pcs, int n, char *buf)
 }
 
 /* ------------------------------------------------------------ commands --- */
-enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW };
+enum { C_SET, C_POOL, C_PLAY, C_NEXT, C_FREEZE, C_SEED, C_PANIC, C_CLOCK, C_REGROW,
+       C_SOLO_NOTE, C_SOLO_SET, C_SOLO_PANIC, C_SOLO_RESET };
 #define QN 64u
 static uint32_t q[QN];
 static volatile uint32_t q_w, q_r;
@@ -296,11 +329,15 @@ void en_seed(uint32_t s) { post(C_SEED, 0, (int)(s & 0xFFFFu)); }
 void en_panic(void) { post(C_PANIC, 0, 0); }
 void en_clock(int msg) { post(C_CLOCK, msg, 0); }
 void en_regrow(void) { post(C_REGROW, 0, 0); }
+void en_solo_note(uint8_t note, uint8_t vel, uint8_t on) { post(C_SOLO_NOTE, note, (int)((vel << 8) | on)); }
+void en_solo_set(int p, int v) { post(C_SOLO_SET, p, v); }
+void en_solo_panic(void) { post(C_SOLO_PANIC, 0, 0); }
+void en_solo_reset(void) { post(C_SOLO_RESET, 0, 0); }
 
 /* -------------------------------------------------------------- state --- */
 volatile uint8_t en_playing, en_frozen, en_ext;
 volatile uint8_t en_chord[EN_NPAD], en_chord_root, en_chord_n;
-volatile float en_drift, en_pad_level, en_bass_level;
+volatile float en_drift, en_pad_level, en_bass_level, en_bowls_level;
 volatile uint8_t en_loop_pos[EN_NLOOP];
 volatile int8_t en_loop_note[EN_NLOOP][EN_LOOP_MAX];
 volatile float en_loop_glow[EN_NLOOP];
@@ -343,13 +380,14 @@ static float mtof(float n) { return 440.0f * tunefac * fm_exp2f((n - 69.0f) * (1
 /* a sine table: 1024 points a turn, plus one */
 #define SN 1024
 static float sint[SN + 1];
-static inline float sine(float ph)              /* ph in turns, any value >= 0 */
+static inline float wave(const float *table, float ph)  /* ph in turns, any value >= 0 */
 {
     float x = (ph - (float)(int)ph) * (float)SN;
     int i = (int)x;
     float f = x - (float)i;
-    return sint[i] + (sint[i + 1] - sint[i]) * f;
+    return table[i] + (table[i + 1] - table[i]) * f;
 }
+static inline float sine(float ph) { return wave(sint, ph); }
 
 /* ------------------------------------------------- slow random motion --- */
 #define NMOD 9                                  /* 0..5 the pads', 6..8 the echo's */
@@ -395,6 +433,9 @@ typedef struct {
 } pad_t;
 static pad_t pad[EN_NPAD];
 static float pad_gate, pad_gain, pad_vol, bright, swell;
+static float text_vol;
+static int text_type;
+static float text_tone = 0.5f, text_dens = 0.5f;
 static const float PAD_PAN[EN_NPAD] = {-0.55f, -0.18f, 0.18f, 0.55f};
 static const float BREATH[EN_NPAD] = {1.0f, 1.21f, 1.43f, 1.67f};    /* unequal cycles, as 2/1's 12..20 s loops */
 static const float START_T[EN_NPAD] = {0.0f, 0.9f, 0.82f, 0.95f};    /* the first breaths overlap */
@@ -527,6 +568,137 @@ static struct {
     uint8_t midi_note, rest;                    /* rest: sitting this chord out */
 } bass;
 static float bass_vol, glide_k = 1.0f / (0.25f * EN_SR);      /* glide_k: 1 / the glide's time in samples */
+
+/* ----------------------------------------------------------------- bowls --- */
+#define BOWL_MODES 5
+#define BOWLS_STRIKE_INTERVAL ((uint32_t)(8.0f * EN_SR))
+
+/* A split fundamental gives slow beating. The inharmonic modes of the rim
+ * lose energy faster than the fundamental. Decays are e-folding times. */
+static const struct {
+    float ratio, weight, decay, side;
+} bowl_modes[BOWL_MODES] = {
+    {1.000f, 0.59f, 3.8f, -0.14f},
+    {1.006f, 0.32f, 3.5f,  0.19f},
+    {2.720f, 0.32f, 2.8f,  0.10f},
+    {4.840f, 0.19f, 1.2f, -0.19f},
+    {7.520f, 0.10f, 0.5f,  0.22f},
+};
+
+typedef struct {
+    uint32_t phase, step;
+    float amp, side;
+} bowl_partial_t;
+
+typedef struct {
+    bowl_partial_t partial[2 * BOWL_MODES];
+    float attack, fade, fade_step;
+    int count;
+} bowl_ring_t;
+
+static struct {
+    bowl_ring_t ring[2];                         /* the new strike and its predecessor */
+    uint32_t until_strike, cloud_left;
+    int current, root, interval, tune;
+    float level, blur;
+} bowls;
+static float bowls_vol;
+static float bowl_decay[BOWL_MODES];
+
+static void bowl_strike(bowl_ring_t *ring, int root, int interval)
+{
+    int bowls = interval ? 2 : 1;
+    ring->count = bowls * BOWL_MODES;
+    ring->attack = 0.0f;
+    ring->fade = 1.0f;
+    ring->fade_step = 0.0f;
+    for (int b = 0; b < bowls; b++) {
+        float step = mtof((float)(root + b * interval)) * (4294967296.0f / EN_SR);
+        float level = bowls == 1 ? 1.0f : b == 0 ? 0.76f : 0.46f;
+        float pan = bowls == 1 ? 0.0f : b == 0 ? -0.23f : 0.27f;
+        for (int k = 0; k < BOWL_MODES; k++) {
+            bowl_partial_t *p = &ring->partial[b * BOWL_MODES + k];
+            p->phase = k == 1 ? (1u << 30) : 0u;
+            p->step = (uint32_t)(step * bowl_modes[k].ratio);
+            p->amp = level * bowl_modes[k].weight;
+            p->side = pan + bowl_modes[k].side;
+        }
+    }
+}
+
+/* Stereo diffusion for the bowls' Blur control. */
+#define CLOUD_STAGES 3
+static const int CLOUD_LEN_L[CLOUD_STAGES] = {2237, 4447, 7187}; /* 50.7ms, 100.8ms, 163.0ms */
+static const int CLOUD_LEN_R[CLOUD_STAGES] = {2503, 4813, 7829}; /* 56.8ms, 109.1ms, 177.5ms */
+#define CLOUD_TOTAL_L (2237 + 4447 + 7187)
+#define CLOUD_TOTAL_R (2503 + 4813 + 7829)
+
+static delay_sample_t cloud_buf_l[CLOUD_TOTAL_L];
+static delay_sample_t cloud_buf_r[CLOUD_TOTAL_R];
+static delay_sample_t *cloud_ptrs_l[CLOUD_STAGES];
+static delay_sample_t *cloud_ptrs_r[CLOUD_STAGES];
+static int cloud_idx_l[CLOUD_STAGES];
+static int cloud_idx_r[CLOUD_STAGES];
+static float cloud_fb_l = 0.0f, cloud_fb_r = 0.0f;
+static float cloud_damp_l = 0.0f, cloud_damp_r = 0.0f;
+static float cloud_hp_l = 0.0f, cloud_hp_r = 0.0f;
+
+/* 2-pole acoustic smoothing lowpass filter state */
+static float bowls_lp1_l = 0.0f, bowls_lp2_l = 0.0f;
+static float bowls_lp1_r = 0.0f, bowls_lp2_r = 0.0f;
+
+static void bowls_cloud_init(void)
+{
+    delay_sample_t *pl = cloud_buf_l;
+    delay_sample_t *pr = cloud_buf_r;
+    for (int k = 0; k < CLOUD_STAGES; k++) {
+        cloud_ptrs_l[k] = pl;
+        cloud_idx_l[k] = 0;
+        pl += CLOUD_LEN_L[k];
+
+        cloud_ptrs_r[k] = pr;
+        cloud_idx_r[k] = 0;
+        pr += CLOUD_LEN_R[k];
+    }
+    for (int i = 0; i < CLOUD_TOTAL_L; i++) cloud_buf_l[i] = 0;
+    for (int i = 0; i < CLOUD_TOTAL_R; i++) cloud_buf_r[i] = 0;
+    cloud_fb_l = cloud_fb_r = 0.0f;
+    cloud_damp_l = cloud_damp_r = 0.0f;
+    cloud_hp_l = cloud_hp_r = 0.0f;
+    bowls_lp1_l = bowls_lp2_l = 0.0f;
+    bowls_lp1_r = bowls_lp2_r = 0.0f;
+}
+
+static inline float cloud_ap_step(delay_sample_t *buf, int *idx, int len, float x, float g)
+{
+    int i = *idx;
+    float z = delay_read(buf[i]);
+    float v = x - g * z;
+    buf[i] = delay_write(fm_flush(v));
+    if (++i >= len) i = 0;
+    *idx = i;
+    return z + g * v;
+}
+
+static inline float cloud_dl_step(delay_sample_t *buf, int *idx, int len, float x)
+{
+    int i = *idx;
+    float z = delay_read(buf[i]);
+    buf[i] = delay_write(fm_flush(x));
+    if (++i >= len) i = 0;
+    *idx = i;
+    return z;
+}
+
+static void bowls_reset(void)
+{
+    bowls.ring[0].count = bowls.ring[1].count = 0;
+    bowls.current = 0;
+    bowls.until_strike = bowls.cloud_left = 0;
+    bowls.level = bowls.blur = en_bowls_level = 0.0f;
+    bowls_cloud_init();
+}
+
 
 /* ----------------------------------------------------------------- bells --- */
 #define NBELL 6
@@ -934,9 +1106,9 @@ static const int DL_LEN[L_N] = {PRE_N, DS(142), DS(107), DS(379), DS(277), DS(67
                                 DS(3720), DS(908) + EXC + 2, DS(4217), DS(2656), DS(3163)};
 #define DL_TOTAL (PRE_N + DS(142) + DS(107) + DS(379) + DS(277) + DS(672) + DS(4453) + DS(1800) + DS(3720) + DS(908) + \
                   DS(4217) + DS(2656) + DS(3163) + 2 * (EXC + 2))
-static float pl_buf[DL_TOTAL] EN_POOL;
+static delay_sample_t pl_buf[DL_TOTAL] EN_POOL;
 typedef struct {
-    float *b;
+    delay_sample_t *b;
     int n, i;
 } dl_t;
 static dl_t dl[L_N];
@@ -945,11 +1117,11 @@ static float pl_bw, pl_damp_l, pl_damp_r, pl_decay = 0.5f, pl_decay_t = 0.5f, pl
 static inline float tap(const dl_t *d, int k)
 {
     int j = d->i - k;
-    return d->b[j < 0 ? j + d->n : j];
+    return delay_read(d->b[j < 0 ? j + d->n : j]);
 }
 static inline void push(dl_t *d, float x)
 {
-    d->b[d->i] = x;
+    d->b[d->i] = delay_write(x);
     if (++d->i >= d->n)
         d->i = 0;
 }
@@ -1004,7 +1176,7 @@ static inline void reverb(float in, float *ol, float *or_)
 
 static void plate_init(void)
 {
-    float *p = pl_buf;
+    delay_sample_t *p = pl_buf;
     int k, i;
     for (k = 0; k < L_N; k++) {
         dl[k].b = p;
@@ -1013,7 +1185,7 @@ static void plate_init(void)
         p += DL_LEN[k];
     }
     for (i = 0; i < DL_TOTAL; i++)
-        pl_buf[i] = 0.0f;
+        pl_buf[i] = 0;
     pl_bw = pl_damp_l = pl_damp_r = 0.0f;
     lfo_s = 0.0f;
     lfo_c = 1.0f;
@@ -1179,6 +1351,15 @@ static void apply(int p, int v)
         hat_f = 0.55f + 0.0070f * (float)v;               /* the high-pass: ~4 kHz dark .. ~10 kHz bright */
         hat_open = 0.6f - 0.0035f * (float)v;             /* the open hat: long and soft .. short and crisp */
         break;
+    case P_TEXT_VOL: text_vol = (float)(v * v) * 0.0001f; break;
+    case P_TEXT_TYPE: text_type = v; break;
+    case P_TEXT_TONE: text_tone = (float)v * 0.01f; break;
+    case P_TEXT_DENS: text_dens = (float)v * 0.01f; break;
+    case P_BOWLS_VOL: {
+        float level = (float)v * 0.01f;
+        bowls_vol = level * (0.5f + 0.5f * level);
+        break;
+    }
     case P_DRIFT:
         if (drift_total > 0.0f) {                /* keep the progress, at the new pace */
             float frac = drift_left / drift_total;
@@ -1278,14 +1459,20 @@ static void quiet(void)
     for (i = 0; i < EN_NPAD; i++)
         pad[i].amp = 0.0f;
     bass.amp = 0.0f;
+    bowls_reset();
     notes_off();
 }
+
+#include "solo.c"
 
 void en_init(void)
 {
     int i;
+    solo_init();
     for (i = 0; i <= SN; i++)
         sint[i] = fm_sinf((float)i * (FM_TWO_PI / (float)SN));
+    for (i = 0; i < BOWL_MODES; i++)
+        bowl_decay[i] = fm_expf(-1.0f / (bowl_modes[i].decay * EN_SR));
     plate_init();
     for (i = 0; i < TAPE_N; i++)
         tape[i] = 0;
@@ -1319,6 +1506,7 @@ void en_init(void)
     for (i = 0; i < EN_NPAD; i++)
         pad[i].note = pad[i].target;
     bass.note = bass.target;
+    bowls_reset();
     for (i = 0; i < EN_NLOOP; i++) {
         loop_pos[i] = 0;
         loop_regrow(i);
@@ -1426,13 +1614,17 @@ static void drain(void)
             break;
         case C_PANIC: quiet(); break;
         case C_REGROW: regrow(); break;
+        case C_SOLO_NOTE: solo_note((uint8_t)a, (uint8_t)(b >> 8), (uint8_t)(b & 0xFF)); break;
+        case C_SOLO_SET: solo_set(a, b); break;
+        case C_SOLO_PANIC: solo_panic(); break;
+        case C_SOLO_RESET: solo_reset_init(); break;
         }
     }
 }
 
 /* --------------------------------------------------------------- render --- */
 #define BLK 256
-static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK];
+static float mixl[BLK], mixr[BLK], rsend[BLK], esend[BLK], solo_rsend[BLK];
 
 /* the pad's bus: a 12 dB low-pass, darker than it sounds on paper (Brian Eno darkened everything: the
  * Synthi's filter below half, then tape). No chorus: a modulated delay against pure tones beats (on
@@ -1573,6 +1765,159 @@ static void render_bass(uint32_t n)
     en_bass_level = amp;
 }
 
+static inline void bowl_step(bowl_ring_t *ring, float *left, float *right)
+{
+    float mid = 0.0f, side = 0.0f;
+    for (int b = 0; b < ring->count; b += BOWL_MODES) {
+        for (int k = 0; k < BOWL_MODES; k++) {
+            bowl_partial_t *p = &ring->partial[b + k];
+            uint32_t i = p->phase >> 22;         /* top ten bits index the shared sine table */
+            float frac = (float)(p->phase & 0x3fffffu) * (1.0f / 4194304.0f);
+            float x = (sint[i] + frac * (sint[i + 1] - sint[i])) * p->amp;
+            p->phase += p->step;
+            p->amp *= bowl_decay[k];
+            mid += x;
+            side += x * p->side;
+        }
+    }
+    ring->attack += (1.0f - ring->attack) * (1.0f / (0.038f * EN_SR));
+    ring->fade = fm_maxf(0.0f, ring->fade - ring->fade_step);
+    float gain = ring->attack * ring->fade;
+    *left += (mid - side) * gain;
+    *right += (mid + side) * gain;
+}
+
+static void bowls_schedule(uint32_t n)
+{
+    if (!en_playing || bowls_vol == 0.0f) {
+        bowls.until_strike = 0;
+        return;
+    }
+
+    int mode = par[P_BOWLS_MODE];
+    int pitch_class = mode == 3 && chord_nt > 0 ? chord_pcs[0] % 12 : par[P_ROOT];
+    int root = 36 + pitch_class + 12 * par[P_BOWLS_OCT];
+    int interval = mode == 1 ? 12 : mode == 2 ? 7 : 0;
+    int tune = par[P_TUNE];
+    int changed = root != bowls.root || interval != bowls.interval || tune != bowls.tune;
+    if (bowls.until_strike == 0 || changed) {
+        int next = 1 - bowls.current;
+        bowl_ring_t *ring = &bowls.ring[next];
+        /* Leave the last pitch ringing. Damp the older strike if its slot is needed. */
+        if (ring->count != 0) {
+            ring->fade_step = 1.0f / (0.04f * EN_SR);
+            return;
+        }
+        /* Crossfade the outgoing resonance at its original pitch. */
+        float fade_seconds = changed ? 2.5f : 1.2f;
+        bowls.ring[bowls.current].fade_step = 1.0f / (fade_seconds * EN_SR);
+        bowl_strike(ring, root, interval);
+        bowls.current = next;
+        bowls.root = root;
+        bowls.interval = interval;
+        bowls.tune = tune;
+        bowls.until_strike = BOWLS_STRIKE_INTERVAL;
+    }
+    bowls.until_strike = bowls.until_strike > n ? bowls.until_strike - n : 0;
+}
+
+static void render_bowls(uint32_t n)
+{
+    bowls_schedule(n);
+    int ringing = bowls.ring[0].count || bowls.ring[1].count;
+    if (!ringing && bowls.cloud_left == 0) {
+        en_bowls_level = 0.0f;
+        return;
+    }
+
+    float blur_goal = (float)par[P_BOWLS_BLUR] * 0.01f;
+    bowls.blur += (blur_goal - bowls.blur) * fm_minf((float)n / (0.04f * EN_SR), 1.0f);
+    float blur = bowls.blur;
+    int feed_cloud = blur > 0.001f;
+    if (ringing && feed_cloud)
+        bowls.cloud_left = (uint32_t)(5.0f * EN_SR);
+    else
+        bowls.cloud_left = bowls.cloud_left > n ? bowls.cloud_left - n : 0;
+    int diffuse = bowls.cloud_left > 0;
+
+    float fc = 11000.0f * fm_exp2f(-3.3f * blur);
+    float c = fm_clampf(1.0f - fm_expf(-FM_TWO_PI * fc * (1.0f / EN_SR)), 0.01f, 0.99f);
+    float dry_w = 1.0f - 0.22f * blur;
+    float fb_gain = 0.15f + 0.50f * blur;
+    float wet_w = 0.44f * blur;
+    const float g1 = 0.55f, g2 = 0.50f;
+    float level = bowls.level;
+
+    for (uint32_t j = 0; j < n; j++) {
+        float raw_l = 0.0f, raw_r = 0.0f;
+        if (bowls.ring[0].count)
+            bowl_step(&bowls.ring[0], &raw_l, &raw_r);
+        if (bowls.ring[1].count)
+            bowl_step(&bowls.ring[1], &raw_l, &raw_r);
+
+        /* 2-pole acoustic smoothing filter */
+        bowls_lp1_l = fm_flush(bowls_lp1_l + c * (raw_l - bowls_lp1_l));
+        bowls_lp2_l = fm_flush(bowls_lp2_l + c * (bowls_lp1_l - bowls_lp2_l));
+        bowls_lp1_r = fm_flush(bowls_lp1_r + c * (raw_r - bowls_lp1_r));
+        bowls_lp2_r = fm_flush(bowls_lp2_r + c * (bowls_lp1_r - bowls_lp2_r));
+
+        float filtered_l = bowls_lp2_l;
+        float filtered_r = bowls_lp2_r;
+
+        float out_l = filtered_l * dry_w, out_r = filtered_r * dry_w;
+        if (diffuse) {
+            /* Cross-feedback from opposite channel */
+            float in_l = cloud_fb_r + (feed_cloud ? filtered_l : 0.0f);
+            float in_r = cloud_fb_l + (feed_cloud ? filtered_r : 0.0f);
+
+            /* Left branch: Allpass 1 (51ms) -> Allpass 2 (101ms) -> Delay (163ms) */
+            float y_l = cloud_ap_step(cloud_ptrs_l[0], &cloud_idx_l[0], CLOUD_LEN_L[0], in_l, g1);
+            y_l = cloud_ap_step(cloud_ptrs_l[1], &cloud_idx_l[1], CLOUD_LEN_L[1], y_l, g2);
+            float d_l = cloud_dl_step(cloud_ptrs_l[2], &cloud_idx_l[2], CLOUD_LEN_L[2], y_l);
+
+            /* Right branch: Allpass 1 (57ms) -> Allpass 2 (109ms) -> Delay (178ms) */
+            float y_r = cloud_ap_step(cloud_ptrs_r[0], &cloud_idx_r[0], CLOUD_LEN_R[0], in_r, g1);
+            y_r = cloud_ap_step(cloud_ptrs_r[1], &cloud_idx_r[1], CLOUD_LEN_R[1], y_r, g2);
+            float d_r = cloud_dl_step(cloud_ptrs_r[2], &cloud_idx_r[2], CLOUD_LEN_R[2], y_r);
+
+            /* Damping lowpass (~3.5 kHz) & highpass */
+            cloud_damp_l = fm_flush(cloud_damp_l + 0.35f * (d_l - cloud_damp_l));
+            cloud_hp_l = fm_flush(cloud_hp_l + 0.005f * (cloud_damp_l - cloud_hp_l));
+            cloud_fb_l = fm_flush((cloud_damp_l - cloud_hp_l) * fb_gain);
+
+            cloud_damp_r = fm_flush(cloud_damp_r + 0.35f * (d_r - cloud_damp_r));
+            cloud_hp_r = fm_flush(cloud_hp_r + 0.005f * (cloud_damp_r - cloud_hp_r));
+            cloud_fb_r = fm_flush((cloud_damp_r - cloud_hp_r) * fb_gain);
+
+            out_l += (y_l * 0.45f + d_l * 0.55f) * wet_w;
+            out_r += (y_r * 0.45f + d_r * 0.55f) * wet_w;
+        }
+
+        level += (bowls_vol - level) * (1.0f / (0.03f * EN_SR));
+        float gain = level * 0.68f;
+        out_l *= gain;
+        out_r *= gain;
+        mixl[j] += out_l;
+        mixr[j] += out_r;
+        rsend[j] += (out_l + out_r) * 0.06f;
+    }
+
+    bowls.level = level;
+    float activity = 0.0f;
+    for (int b = 0; b < 2; b++) {
+        bowl_ring_t *ring = &bowls.ring[b];
+        if (ring->count == 0)
+            continue;
+        float body = ring->partial[0].amp;
+        if (body < 1e-4f || ring->fade == 0.0f || (bowls_vol == 0.0f && level < 1e-4f))
+            ring->count = 0;
+        else
+            activity += body * ring->attack * ring->fade;
+    }
+    en_bowls_level = fm_minf(activity / bowl_modes[0].weight, 1.0f);
+}
+
+
 static void render_bells(uint32_t n)
 {
     int i;
@@ -1688,20 +2033,488 @@ static void render_drums(uint32_t n)
     render_hat(&drum[2], n, g * 0.14f, 1.0f, 0.7f);   /* open: a little left */
 }
 
+/* ------------------------------------------------------------- texture --- */
+static uint32_t text_rng = 0x58A3B291u;
+static inline uint32_t text_rnd(void)
+{
+    uint32_t x = text_rng;
+    x ^= x << 13;
+    x ^= x >> 17;
+    text_rng = x ^ (x << 5);
+    return text_rng;
+}
+static inline float text_frand(void)
+{
+    return (float)(text_rnd() >> 8) * (1.0f / 16777216.0f);
+}
+
+/* Rain: a diffuse bed under many overlapping, mid-heavy water splashes. */
+#define RAIN_DROPS 12
+static struct {
+    float tail, env, band, low;
+    float cutoff, damping, attack, decay, pan;
+} rain_drop[RAIN_DROPS];
+static float rain_weather = 1.0f, rain_weather_target = 1.0f;
+static uint32_t rain_weather_left;
+static float rain_hp_l, rain_hp_r;
+static float rain_hp2_l, rain_hp2_r;
+static float rain_body_band_l, rain_body_band_r, rain_body_low_l, rain_body_low_r;
+static float rain_lp1_l, rain_lp1_r;
+static float rain_lp2_l, rain_lp2_r;
+static float rain_out_lp_l, rain_out_lp_r;
+
+/* Wind state: dual resonant wandering bandpass with flow speed & intensity scaling */
+static float wind_bp_l[2], wind_lp_l[2];
+static float wind_bp_r[2], wind_lp_r[2];
+static float wind_gust[2] = {0.3f, 0.3f}, wind_gust_tgt[2] = {0.3f, 0.3f};
+static uint32_t wind_gust_time;
+
+/* Vinyl state */
+static float vinyl_rumble1, vinyl_rumble2;
+static float vinyl_hiss_hp, vinyl_hiss_lp;
+static float vinyl_click_env, vinyl_click_amp, vinyl_click_pan;
+
+/* Ocean state: natural shoreline waves (centered mid-image, non-resonant gentle RC filters) */
+static float ocean_brown_l, ocean_brown_r;
+static float ocean_brown_dc_l, ocean_brown_dc_r;
+static float ocean_body_lp_l, ocean_body_lp_r;
+static float ocean_foam_lp_l, ocean_foam_lp_r;
+static float ocean_foam_hp_l, ocean_foam_hp_r;
+static float ocean_sand_lp_l, ocean_sand_lp_r;
+static float ocean_phase;
+static float ocean_period;
+static float ocean_amp = 0.9f, ocean_amp_tgt = 0.9f;
+
+/* Train state: clean deep night passenger train wheel clatter on rail joints */
+static float train_bp0_l, train_lp0_l, train_bp0_r, train_lp0_r;
+static float train_bp1_l, train_lp1_l, train_bp1_r, train_lp1_r;
+static float train_bp2_l, train_lp2_l, train_bp2_r, train_lp2_r;
+static float train_bp3_l, train_lp3_l, train_bp3_r, train_lp3_r;
+static float train_clat_lp1_l, train_clat_lp1_r, train_clat_lp2_l, train_clat_lp2_r;
+static float train_env[4];
+static float train_dc_l, train_dc_r;
+static float train_phase;
+
+static void render_texture(uint32_t n)
+{
+    if (text_vol <= 0.00005f)
+        return;
+
+    uint32_t j;
+    const float vol = text_vol;
+    const float tone = text_tone;
+    const float dens = text_dens;
+
+    switch (text_type) {
+    case 0: { /* Dense, irregular water patter over a quieter outdoor wash. */
+        const float hp_fc = 280.0f * (FM_TWO_PI / EN_SR);
+        const float body_fc = (600.0f + 400.0f * tone) * (FM_TWO_PI / EN_SR);
+        float window_fc = (2200.0f + 3400.0f * tone) * (FM_TWO_PI / EN_SR);
+        window_fc /= 1.0f + window_fc;
+        const float p_drop = (16.0f + 95.0f * dens * dens) / EN_SR;
+        const float bed_gain = (0.25f + 0.15f * dens) * vol;
+        const float drop_gain = (0.75f + 0.25f * dens) * vol;
+        const float air_fc = 0.44f + 0.32f * tone;
+
+        for (j = 0; j < n; j++) {
+            /* Irregular subsecond/second changes keep the wash from becoming steady hiss. */
+            if (!rain_weather_left) {
+                rain_weather_target = 0.60f + 0.80f * text_frand();
+                rain_weather_left = (uint32_t)((0.30f + 1.80f * text_frand()) * EN_SR);
+            }
+            rain_weather_left--;
+            rain_weather += (1.0f / (0.18f * EN_SR)) * (rain_weather_target - rain_weather);
+
+            float wl = text_frand() * 2.0f - 1.0f;
+            float wr = text_frand() * 2.0f - 1.0f;
+            /* Mostly independent sides; a small shared component joins the scene. */
+            float bed_l = wl + 0.15f * wr;
+            float bed_r = wr + 0.15f * wl;
+            rain_hp_l += hp_fc * (bed_l - rain_hp_l); bed_l -= rain_hp_l;
+            rain_hp_r += hp_fc * (bed_r - rain_hp_r); bed_r -= rain_hp_r;
+            rain_hp2_l += hp_fc * (bed_l - rain_hp2_l); bed_l -= rain_hp2_l;
+            rain_hp2_r += hp_fc * (bed_r - rain_hp2_r); bed_r -= rain_hp2_r;
+            rain_body_band_l += body_fc * (bed_l - rain_body_low_l - 1.10f * rain_body_band_l);
+            rain_body_band_r += body_fc * (bed_r - rain_body_low_r - 1.10f * rain_body_band_r);
+            rain_body_low_l += body_fc * rain_body_band_l;
+            rain_body_low_r += body_fc * rain_body_band_r;
+            rain_lp1_l += window_fc * (bed_l - rain_lp1_l);
+            rain_lp1_r += window_fc * (bed_r - rain_lp1_r);
+            rain_lp2_l += window_fc * (rain_lp1_l - rain_lp2_l);
+            rain_lp2_r += window_fc * (rain_lp1_r - rain_lp2_r);
+            bed_l = 0.79f * rain_body_band_l + 0.20f * rain_lp2_l;
+            bed_r = 0.79f * rain_body_band_r + 0.20f * rain_lp2_r;
+
+            if (text_frand() < p_drop * rain_weather) {
+                int k = 0;
+                for (int d = 1; d < RAIN_DROPS; d++)
+                    if (rain_drop[d].tail < rain_drop[k].tail) k = d;
+                float size = text_frand();
+                size *= size;
+                /* Noise excited, broadly damped bodies: no pitched metal oscillators. */
+                rain_drop[k].cutoff = (600.0f + 600.0f * (1.0f - size)) *
+                                      (0.80f + 0.40f * tone) * (FM_TWO_PI / EN_SR);
+                rain_drop[k].damping = 0.75f + 0.10f * size;
+                rain_drop[k].attack = 1.0f / ((0.0006f + 0.0018f * size) * EN_SR);
+                rain_drop[k].decay = 1.0f - 1.0f / ((0.006f + 0.028f * size) * EN_SR);
+                rain_drop[k].tail = (0.08f + 1.40f * size) * (0.80f + 0.20f * rain_weather);
+                float pan = text_frand();
+                rain_drop[k].pan = pan < 0.5f ? 0.05f + 0.40f * pan : 0.75f + 0.40f * (pan - 0.5f);
+            }
+
+            float patter_l = 0.0f, patter_r = 0.0f;
+            for (int d = 0; d < RAIN_DROPS; d++) {
+                if (rain_drop[d].tail < 0.00001f && rain_drop[d].env < 0.00001f)
+                    continue;
+                rain_drop[d].tail *= rain_drop[d].decay;
+                rain_drop[d].env += rain_drop[d].attack * (rain_drop[d].tail - rain_drop[d].env);
+                float noise = (text_frand() * 2.0f - 1.0f) * rain_drop[d].env;
+                rain_drop[d].band += rain_drop[d].cutoff *
+                                    (noise - rain_drop[d].low - rain_drop[d].damping * rain_drop[d].band);
+                rain_drop[d].low += rain_drop[d].cutoff * rain_drop[d].band;
+                float splash = rain_drop[d].band * rain_drop[d].damping;
+                patter_l += splash * (1.0f - rain_drop[d].pan);
+                patter_r += splash * rain_drop[d].pan;
+            }
+
+            rain_out_lp_l += air_fc * (bed_l * bed_gain * rain_weather + patter_l * drop_gain - rain_out_lp_l);
+            rain_out_lp_r += air_fc * (bed_r * bed_gain * rain_weather + patter_r * drop_gain - rain_out_lp_r);
+            float sl = rain_out_lp_l;
+            float sr = rain_out_lp_r;
+            mixl[j] += sl;
+            mixr[j] += sr;
+            rsend[j] += (sl + sr) * 0.025f;
+        }
+        break;
+    }
+
+    case 1: { /* Wind: dual resonant wandering bandpass filters with flow speed & intensity scaling */
+        float base_f1 = 0.015f + 0.035f * tone;
+        float base_f2 = 0.050f + 0.080f * tone;
+
+        /* Density scales flow speed (gust frequency & rise rate) and airflow intensity */
+        float min_sec = 6.0f - 4.2f * dens;  /* 6.0s down to 1.8s */
+        float span_sec = 4.0f - 2.5f * dens; /* 4.0s down to 1.5s */
+        float gust_speed = 0.00002f + 0.00006f * dens;
+        float intensity = (0.45f + 0.55f * dens) * vol;
+        float gust_scale = 0.40f + 0.60f * dens;
+
+        for (j = 0; j < n; j++) {
+            if (wind_gust_time <= 1u) {
+                wind_gust_time = (uint32_t)((min_sec + span_sec * text_frand()) * EN_SR);
+                wind_gust_tgt[0] = text_frand() * gust_scale;
+                wind_gust_tgt[1] = text_frand() * gust_scale;
+            } else {
+                wind_gust_time--;
+            }
+
+            wind_gust[0] += gust_speed * (wind_gust_tgt[0] - wind_gust[0]);
+            wind_gust[1] += gust_speed * (wind_gust_tgt[1] - wind_gust[1]);
+
+            float g0 = wind_gust[0] + 0.25f * fm_maxf(arcm, 0.0f);
+            float g1 = wind_gust[1] + 0.25f * fm_maxf(arcm, 0.0f);
+
+            float f1 = base_f1 + 0.02f * g0;
+            float f2 = base_f2 + 0.04f * g1;
+
+            float w_l = text_frand() * 2.0f - 1.0f;
+            float w_r = text_frand() * 2.0f - 1.0f;
+
+            /* Resonator 1 */
+            float hp1_l = w_l - wind_lp_l[0] - 0.08f * wind_bp_l[0];
+            wind_bp_l[0] += f1 * hp1_l;
+            wind_lp_l[0] += f1 * wind_bp_l[0];
+
+            float hp1_r = w_r - wind_lp_r[0] - 0.08f * wind_bp_r[0];
+            wind_bp_r[0] += f1 * hp1_r;
+            wind_lp_r[0] += f1 * wind_bp_r[0];
+
+            /* Resonator 2 */
+            float hp2_l = w_l - wind_lp_l[1] - 0.06f * wind_bp_l[1];
+            wind_bp_l[1] += f2 * hp2_l;
+            wind_lp_l[1] += f2 * wind_bp_l[1];
+
+            float hp2_r = w_r - wind_lp_r[1] - 0.06f * wind_bp_r[1];
+            wind_bp_r[1] += f2 * hp2_r;
+            wind_lp_r[1] += f2 * wind_bp_r[1];
+
+            float sig_l = (wind_bp_l[0] * 0.45f * (0.3f + 0.7f * g0) + wind_bp_l[1] * 0.35f * (0.2f + 0.8f * g1)) * intensity;
+            float sig_r = (wind_bp_r[0] * 0.45f * (0.3f + 0.7f * g0) + wind_bp_r[1] * 0.35f * (0.2f + 0.8f * g1)) * intensity;
+
+            mixl[j] += sig_l;
+            mixr[j] += sig_r;
+            rsend[j] += (sig_l + sig_r) * 0.15f;
+        }
+        break;
+    }
+
+    case 2: { /* Vinyl: sub-bass turntable rumble + surface hiss + Poisson dust crackle */
+        float p_click = 0.0001f + 0.0016f * dens;
+        float hiss_k = 0.08f + 0.28f * tone;
+        for (j = 0; j < n; j++) {
+            float w = text_frand() * 2.0f - 1.0f;
+            vinyl_rumble1 += 0.006f * (w - vinyl_rumble1);
+            vinyl_rumble2 += 0.006f * (vinyl_rumble1 - vinyl_rumble2);
+            float rumble = vinyl_rumble2 * 1.8f;
+
+            vinyl_hiss_hp += 0.12f * (w - vinyl_hiss_hp);
+            float h_in = w - vinyl_hiss_hp;
+            vinyl_hiss_lp += hiss_k * (h_in - vinyl_hiss_lp);
+            float hiss = vinyl_hiss_lp * (0.04f + 0.06f * tone);
+
+            if (text_frand() < p_click && vinyl_click_env < 0.05f) {
+                float r = text_frand();
+                vinyl_click_amp = (r * r * r) * (text_frand() > 0.5f ? 0.6f : -0.6f) * (0.5f + 0.5f * tone);
+                vinyl_click_pan = text_frand();
+                vinyl_click_env = 1.0f;
+            }
+            float click = vinyl_click_env * vinyl_click_amp;
+            vinyl_click_env *= 0.88f;
+
+            float sl = (rumble * 0.7f + hiss * 0.8f + click * (1.0f - vinyl_click_pan)) * vol;
+            float sr = (rumble * 0.7f + hiss * 0.8f + click * vinyl_click_pan) * vol;
+
+            mixl[j] += sl;
+            mixr[j] += sr;
+            rsend[j] += (sl + sr) * 0.08f;
+        }
+        break;
+    }
+
+    case 3: { /* Ocean: rolling shoreline waves centered in front of listener (no resonant bandpasses) */
+        float base_period = 11.0f - 6.5f * dens; /* dens=0 -> 11s, dens=0.5 -> 7.75s, dens=1 -> 4.5s */
+        float fc_crash = 0.10f + 0.22f * tone;
+        float fc_sand = 0.20f + 0.25f * tone;
+        float crash_k = (0.15f + 0.25f * tone);
+        float wash_k = (0.04f + 0.08f * tone);
+
+        if (ocean_period < 1.0f)
+            ocean_period = base_period;
+
+        float phase_inc = 1.0f / (ocean_period * (float)EN_SR);
+
+        for (j = 0; j < n; j++) {
+            ocean_phase += phase_inc;
+            if (ocean_phase >= 1.0f) {
+                ocean_phase -= 1.0f;
+                ocean_period = base_period * (0.85f + 0.30f * text_frand());
+                phase_inc = 1.0f / (ocean_period * (float)EN_SR);
+                ocean_amp_tgt = 0.75f + 0.45f * text_frand();
+            }
+
+            ocean_amp += 0.00008f * (ocean_amp_tgt - ocean_amp);
+
+            /* Realistic asymmetric wave profile:
+             * 0.00..0.40: Swell builds up in front (накат волны)
+             * 0.40..0.52: Crest break & shore crash (удар о берег)
+             * 0.52..0.82: Wash & undertow (откат по песку, шипение пены)
+             * 0.82..1.00: Quiet ocean horizon lull */
+            float p = ocean_phase;
+            float swell_env, crash_env, wash_env;
+            if (p < 0.40f) {
+                float r = p * (1.0f / 0.40f);
+                float r2 = r * r;
+                swell_env = 0.20f + 0.60f * r2;
+                crash_env = 0.02f + 0.25f * (r2 * r);
+                wash_env = 0.03f;
+            } else if (p < 0.52f) {
+                float r = (p - 0.40f) * (1.0f / 0.12f);
+                float s = r * (2.0f - r);
+                swell_env = 0.80f + 0.20f * s;
+                crash_env = 0.27f + 0.73f * s;
+                wash_env = 0.03f + 0.40f * r;
+            } else if (p < 0.82f) {
+                float r = (p - 0.52f) * (1.0f / 0.30f);
+                float u = 1.0f - r;
+                float u2 = u * u;
+                swell_env = 0.20f + 0.80f * (u2 * u);
+                crash_env = u2 * u2;
+                wash_env = 0.03f + 0.97f * u2;
+            } else {
+                swell_env = 0.20f;
+                crash_env = 0.02f;
+                wash_env = 0.03f;
+            }
+
+            swell_env *= ocean_amp;
+            crash_env *= ocean_amp;
+            wash_env *= ocean_amp;
+
+            /* 85% mid (centered in front of listener), 15% side ambient decorrelation */
+            float w_mid = text_frand() * 2.0f - 1.0f;
+            float w_side_l = text_frand() * 2.0f - 1.0f;
+            float w_side_r = text_frand() * 2.0f - 1.0f;
+
+            float wl = w_mid * 0.85f + w_side_l * 0.15f;
+            float wr = w_mid * 0.85f + w_side_r * 0.15f;
+
+            /* 1. Velvety Brown body (1/f^2 integrated water mass) */
+            ocean_brown_l = ocean_brown_l * 0.994f + wl * 0.065f;
+            ocean_brown_r = ocean_brown_r * 0.994f + wr * 0.065f;
+
+            ocean_brown_dc_l += 0.001f * (ocean_brown_l - ocean_brown_dc_l);
+            float bl = ocean_brown_l - ocean_brown_dc_l;
+            ocean_brown_dc_r += 0.001f * (ocean_brown_r - ocean_brown_dc_r);
+            float br = ocean_brown_r - ocean_brown_dc_r;
+
+            /* Smooth 1-pole lowpass (non-resonant) opening during swell */
+            float fc_body = 0.020f + 0.035f * swell_env;
+            ocean_body_lp_l += fc_body * (bl - ocean_body_lp_l);
+            ocean_body_lp_r += fc_body * (br - ocean_body_lp_r);
+
+            float body_sig_l = (0.5f * bl + 0.5f * ocean_body_lp_l) * swell_env * 0.70f;
+            float body_sig_r = (0.5f * br + 0.5f * ocean_body_lp_r) * swell_env * 0.70f;
+
+            /* 2. Crash / Water rush: gentle non-resonant 1-pole band (~280Hz to ~1.2-2.5kHz) */
+            ocean_foam_lp_l += fc_crash * (wl - ocean_foam_lp_l);
+            ocean_foam_lp_r += fc_crash * (wr - ocean_foam_lp_r);
+
+            ocean_foam_hp_l += 0.04f * (ocean_foam_lp_l - ocean_foam_hp_l);
+            ocean_foam_hp_r += 0.04f * (ocean_foam_lp_r - ocean_foam_hp_r);
+
+            float crash_sig_l = (ocean_foam_lp_l - ocean_foam_hp_l) * (crash_k * crash_env);
+            float crash_sig_r = (ocean_foam_lp_r - ocean_foam_hp_r) * (crash_k * crash_env);
+
+            /* 3. Foam fizz & sand wash: gentle 1-pole highpass (bubbles on wet sand) */
+            float w_fizz_l = w_mid * 0.65f + w_side_l * 0.35f;
+            float w_fizz_r = w_mid * 0.65f + w_side_r * 0.35f;
+
+            ocean_sand_lp_l += fc_sand * (w_fizz_l - ocean_sand_lp_l);
+            ocean_sand_lp_r += fc_sand * (w_fizz_r - ocean_sand_lp_r);
+
+            float wash_sig_l = (w_fizz_l - ocean_sand_lp_l) * (wash_k * wash_env);
+            float wash_sig_r = (w_fizz_r - ocean_sand_lp_r) * (wash_k * wash_env);
+
+            float sl = (body_sig_l + crash_sig_l + wash_sig_l) * vol;
+            float sr = (body_sig_r + crash_sig_r + wash_sig_r) * vol;
+
+            mixl[j] += sl;
+            mixr[j] += sr;
+            rsend[j] += (sl + sr) * 0.14f;
+        }
+        break;
+    }
+
+    case 4: { /* Train: clean deep rail joint wheel clatter (pure rhythmic night train, no background hiss) */
+        float cycle_secs = 2.4f - 1.2f * dens;
+        float train_inc = 1.0f / (cycle_secs * (float)EN_SR);
+
+        /* Deep mass resonances (Hz) - low, heavy, dark iron */
+        float fc0 = (70.0f + 25.0f * dens) * (FM_TWO_PI / (float)EN_SR);   /* Sub bogie shock 70-95 Hz */
+        float fc1 = (140.0f + 50.0f * tone) * (FM_TWO_PI / (float)EN_SR);  /* Cavity/floor 140-190 Hz */
+        float fc2 = (280.0f + 100.0f * tone) * (FM_TWO_PI / (float)EN_SR); /* Cast iron wheel/rail 280-380 Hz */
+        float fc3 = (480.0f + 200.0f * tone) * (FM_TWO_PI / (float)EN_SR); /* Joint contact tick 480-680 Hz */
+
+        /* Steep 2-pole lowpass (450-800 Hz) to keep hits dark, warm, and solid */
+        float fc_clat_lp = (450.0f + 350.0f * tone) * (FM_TWO_PI / (float)EN_SR);
+
+        const float decay = 1.0f - (1.0f / (0.012f * (float)EN_SR));
+
+        for (j = 0; j < n; j++) {
+            float old_p = train_phase;
+            train_phase += train_inc;
+            if (train_phase >= 1.0f) {
+                train_phase -= 1.0f;
+                train_env[0] = 1.0f;
+            } else if (old_p < 0.095f && train_phase >= 0.095f) {
+                train_env[1] = 1.0f;
+            } else if (old_p < 0.540f && train_phase >= 0.540f) {
+                train_env[2] = 1.0f;
+            } else if (old_p < 0.635f && train_phase >= 0.635f) {
+                train_env[3] = 1.0f;
+            }
+
+            float exc_l = 0.0f, exc_r = 0.0f;
+            static const float HIT_WEIGHTS[4] = {1.00f, 0.75f, 0.90f, 0.70f};
+            static const float HIT_PANS[4] = {0.38f, 0.42f, 0.58f, 0.62f};
+
+            for (int k = 0; k < 4; k++) {
+                if (train_env[k] > 0.0005f) {
+                    float noise = (text_frand() * 2.0f - 1.0f) * train_env[k] * HIT_WEIGHTS[k];
+                    float pan = HIT_PANS[k];
+                    exc_l += noise * (1.0f - pan) * 2.0f;
+                    exc_r += noise * pan * 2.0f;
+                    train_env[k] *= decay;
+                }
+            }
+
+            /* 1. Mode 0: Sub bogie shock (70-95 Hz, Q=2.2) */
+            float hp0_l = exc_l - train_lp0_l - 0.45f * train_bp0_l;
+            train_bp0_l += fc0 * hp0_l; train_lp0_l += fc0 * train_bp0_l;
+            float hp0_r = exc_r - train_lp0_r - 0.45f * train_bp0_r;
+            train_bp0_r += fc0 * hp0_r; train_lp0_r += fc0 * train_bp0_r;
+
+            /* 2. Mode 1: Carriage floor hollow resonance (140-190 Hz, Q=3.0) */
+            float hp1_l = exc_l - train_lp1_l - 0.33f * train_bp1_l;
+            train_bp1_l += fc1 * hp1_l; train_lp1_l += fc1 * train_bp1_l;
+            float hp1_r = exc_r - train_lp1_r - 0.33f * train_bp1_r;
+            train_bp1_r += fc1 * hp1_r; train_lp1_r += fc1 * train_bp1_r;
+
+            /* 3. Mode 2: Heavy cast iron wheel/rail (280-380 Hz, Q=4.5) */
+            float hp2_l = exc_l - train_lp2_l - 0.22f * train_bp2_l;
+            train_bp2_l += fc2 * hp2_l; train_lp2_l += fc2 * train_bp2_l;
+            float hp2_r = exc_r - train_lp2_r - 0.22f * train_bp2_r;
+            train_bp2_r += fc2 * hp2_r; train_lp2_r += fc2 * train_bp2_r;
+
+            /* 4. Mode 3: Joint contact tick (480-680 Hz, Q=5.0) */
+            float hp3_l = exc_l - train_lp3_l - 0.20f * train_bp3_l;
+            train_bp3_l += fc3 * hp3_l; train_lp3_l += fc3 * train_bp3_l;
+            float hp3_r = exc_r - train_lp3_r - 0.20f * train_bp3_r;
+            train_bp3_r += fc3 * hp3_r; train_lp3_r += fc3 * train_bp3_r;
+
+            /* Combine modes with heavy weight on deep low frequencies */
+            float raw_hit_l = train_bp0_l * 1.6f + train_bp1_l * 1.3f + train_bp2_l * 0.9f + train_bp3_l * 0.4f;
+            float raw_hit_r = train_bp0_r * 1.6f + train_bp1_r * 1.3f + train_bp2_r * 0.9f + train_bp3_r * 0.4f;
+
+            /* 2-pole lowpass filter to keep sound warm, deep, and dark */
+            train_clat_lp1_l += fc_clat_lp * (raw_hit_l - train_clat_lp1_l);
+            train_clat_lp2_l += fc_clat_lp * (train_clat_lp1_l - train_clat_lp2_l);
+            train_clat_lp1_r += fc_clat_lp * (raw_hit_r - train_clat_lp1_r);
+            train_clat_lp2_r += fc_clat_lp * (train_clat_lp1_r - train_clat_lp2_r);
+
+            float sig_l = train_clat_lp2_l * 3.8f;
+            float sig_r = train_clat_lp2_r * 3.8f;
+
+            /* 30 Hz DC block */
+            train_dc_l += 0.004f * (sig_l - train_dc_l); sig_l -= train_dc_l;
+            train_dc_r += 0.004f * (sig_r - train_dc_r); sig_r -= train_dc_r;
+
+            float sl = sig_l * vol * 0.60f;
+            float sr = sig_r * vol * 0.60f;
+
+            mixl[j] += sl;
+            mixr[j] += sr;
+            rsend[j] += (sl + sr) * 0.08f;
+        }
+        break;
+    }
+    }
+}
+
 static void render_chunk(int32_t *out, uint32_t n, float gain)
 {
     uint32_t j;
     const float rg = rev_send * rev_in_gain * (1.0f - 0.25f * arcm), eg = echo_send;
     for (j = 0; j < n; j++)
-        mixl[j] = mixr[j] = rsend[j] = esend[j] = 0.0f;
+        mixl[j] = mixr[j] = rsend[j] = esend[j] = solo_rsend[j] = 0.0f;
     render_pad(n);
     render_bass(n);
+    render_bowls(n);
     render_bells(n);
     render_drums(n);
+    solo_render(mixl, mixr, esend, solo_rsend, n);
+    render_texture(n);
+    float rwid = (float)solo_get(SP_REV_WID) * 0.01f;
     for (j = 0; j < n; j++) {
         float wl, wr, l, r, el, er, xl, xr;
         echoes(esend[j] * eg, &el, &er, &xl, &xr);
-        reverb((rsend[j] * rg + (el + er + xl + xr) * 0.35f * rev_send) * 0.8f, &wl, &wr);
+        reverb(((rsend[j] * rg + solo_rsend[j]) + (el + er + xl + xr) * 0.35f * rev_send) * 0.8f, &wl, &wr);
+        if (rwid != 0.5f) {
+            float rmid = 0.5f * (wl + wr);
+            float rside = 0.5f * (wl - wr) * (0.2f + 1.6f * rwid);
+            wl = rmid + rside;
+            wr = rmid - rside;
+        }
         l = (mixl[j] + 0.75f * el + 0.3f * xl + 1.3f * wl) * 0.36f * gain;
         r = (mixr[j] + 0.75f * er + 0.3f * xr + 1.3f * wr) * 0.36f * gain;
         out[2 * j] = (int32_t)(fm_tanhf(l) * 8300000.0f);

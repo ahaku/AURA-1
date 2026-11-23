@@ -67,6 +67,25 @@ static void run(float secs)
     }
 }
 
+static void measure_partials(const float hz[3], float amp[3])
+{
+    float re[3] = {0}, im[3] = {0};
+    const int blocks = 64;
+    for (int block = 0; block < blocks; block++) {
+        en_render(buf, 256, 2048);
+        for (int j = 0; j < 256; j++) {
+            float mono = (float)(buf[2 * j] + buf[2 * j + 1]) * (1.0f / 16777216.0f);
+            float time = (float)(block * 256 + j) * (6.283185307f / EN_SR);
+            for (int k = 0; k < 3; k++) {
+                re[k] += mono * cosf(time * hz[k]);
+                im[k] += mono * sinf(time * hz[k]);
+            }
+        }
+    }
+    for (int k = 0; k < 3; k++)
+        amp[k] = 2.0f * sqrtf(re[k] * re[k] + im[k] * im[k]) / (float)(blocks * 256);
+}
+
 int main(void)
 {
     int pcs[4], n, i;
@@ -87,6 +106,11 @@ int main(void)
         int st[12];
         CHECK(en_scale(EN_MODE_POOL[MODE_DORIAN], st) == 7 && st[2] == 3 && st[6] == 10, "Dorian steps");
         CHECK(en_scale(EN_MODE_POOL[MODE_PENT_MIN], st) == 5, "pentatonic minor has 5");
+        CHECK(en_scale(EN_MODE_POOL[MODE_HIRAJOSHI], st) == 5, "Hirajoshi has 5 steps");
+        CHECK(en_scale(EN_MODE_POOL[MODE_INSEN], st) == 5, "Insen has 5 steps");
+        CHECK(en_scale(EN_MODE_POOL[MODE_WHOLE_TONE], st) == 6, "Whole Tone has 6 steps");
+        CHECK(en_scale(EN_MODE_POOL[MODE_LYDIAN_DOM], st) == 7, "Lydian Dom has 7 steps");
+        CHECK(!strcmp(EN_MODE_NAME[MODE_LYDIAN_DOM], "Lydian Dominant"), "Lydian Dominant name");
         CHECK(en_scale(0, st) == 1, "the root is always in");
     }
     n = en_chord_tones(EN_MODE_POOL[MODE_IONIAN], 0, 0, pcs);
@@ -307,6 +331,194 @@ int main(void)
     run(1.0f);
     CHECK(peak < 0.01f, "quiet after stopping (%f)", (double)peak);
     CHECK(midi_count > 50u, "MIDI out (%u)", midi_count);
+
+    /* The isolated bowl keeps its inharmonic ring at maximum Blur. */
+    {
+        const float root = 146.83238f;   /* D3, octave +1 */
+        const float hz[3] = {root, 2.72f * root, 4.84f * root};
+        const float next_hz[3] = {root, 220.0f, 2.72f * 220.0f}; /* D3 and A3 */
+        float early[3], late[3], renewed[3], retuned[3];
+        en_init();
+        en_set(P_PAD, 0);
+        en_set(P_BELLS, 0);
+        en_set(P_BASS, 0);
+        en_set(P_PULSE, 0);
+        en_set(P_TEXT_VOL, 0);
+        en_set(P_ECHO, 0);
+        en_set(P_REVERB, 0);
+        en_set(P_ROOT, 2);
+        en_set(P_BOWLS_OCT, 1);
+        en_set(P_BOWLS_VOL, 100);
+        en_set(P_BOWLS_BLUR, 100);
+        en_play(1);
+        run(0.25f);
+        measure_partials(hz, early);
+        run(4.0f);
+        measure_partials(hz, late);
+        CHECK(early[1] > 0.02f, "bowl first overtone at maximum Blur: %.4f", (double)early[1]);
+        CHECK(early[2] > 0.005f && late[2] < 0.2f * early[2] && late[0] > 0.014f,
+              "bowl loses its bright overtone first: %.4f to %.4f, fundamental %.4f",
+              (double)early[2], (double)late[2], (double)late[0]);
+        run(3.4f);
+        measure_partials(hz, renewed);
+        CHECK(renewed[1] > 2.0f * late[1], "bowl is struck again: %.4f to %.4f",
+              (double)late[1], (double)renewed[1]);
+        en_set(P_ROOT, 9);
+        run(0.25f);
+        measure_partials(next_hz, retuned);
+        CHECK(retuned[0] > 0.02f && retuned[1] > 0.035f, "bowl pitch handoff: old %.4f, new %.4f",
+              (double)retuned[0], (double)retuned[1]);
+    }
+
+    /* Solo engine: 13 presets, Saw/Square waves, and Arpeggiator */
+    {
+        solo_init();
+        CHECK(!strcmp(solo_preset_name(0), "Pure"), "preset 0 Pure");
+        CHECK(!strcmp(solo_preset_name(2), "Chime"), "preset 2 Chime");
+        CHECK(!strcmp(solo_preset_name(9), "Vangelis"), "preset 9 Vangelis");
+        CHECK(!strcmp(solo_preset_name(10), "Astral"), "preset 10 Astral");
+        CHECK(!strcmp(solo_preset_name(12), "User"), "preset 12 User");
+        solo_load_preset(10);
+        CHECK(solo_get(SP_ARP_MODE) == 3, "Astral has Arp Up/Dn enabled");
+        solo_note(60, 100, 1);
+        solo_note(64, 100, 1);
+        solo_note(67, 100, 1);
+        float l[64], r[64], es[64], rs[64];
+        solo_render(l, r, es, rs, 64);
+        solo_note(60, 0, 0);
+        solo_note(64, 0, 0);
+        solo_note(67, 0, 0);
+        solo_render(l, r, es, rs, 64);
+        solo_panic();
+        char sbuf[16];
+        solo_param_text(SP_GLIDE, 0, sbuf);
+        CHECK(!strcmp(sbuf, "Off"), "Glide is Off at zero");
+
+        /* Test Arp Hold (Latch) */
+        solo_load_preset(10); /* Astral, Arp Up/Dn */
+        solo_arp_hold_set(1);
+        CHECK(solo_arp_hold_get() == 1, "Arp Hold is active");
+        solo_note(60, 100, 1);
+        solo_note(64, 100, 1);
+        solo_note(67, 100, 1);
+        solo_render(l, r, es, rs, 64);
+        /* Release physical keys */
+        solo_note(60, 0, 0);
+        solo_note(64, 0, 0);
+        solo_note(67, 0, 0);
+        /* Arp should remain latched and cycling */
+        CHECK((solo_arp_latched_keys() & (1u << (60 - 53))) != 0, "Latched note 60");
+        CHECK((solo_arp_latched_keys() & (1u << (64 - 53))) != 0, "Latched note 64");
+        CHECK((solo_arp_latched_keys() & (1u << (67 - 53))) != 0, "Latched note 67");
+        solo_render(l, r, es, rs, 64);
+        /* Play new note -> clears old chord and latches new one */
+        solo_note(72, 100, 1);
+        solo_note(72, 0, 0);
+        CHECK(solo_arp_latched_keys() == (1u << (72 - 53)), "Latched replaced by note 72");
+        solo_arp_hold_set(0);
+        CHECK(solo_arp_hold_get() == 0, "Arp Hold disabled");
+        CHECK(solo_arp_latched_keys() == 0, "No latched keys after hold off");
+
+        /* Test mode memory and capture */
+        solo_set(SP_ARP_MODE, 4); /* Random */
+        CHECK(solo_arp_last_mode_get() == 4, "remembers Random mode");
+        solo_set(SP_ARP_MODE, 0); /* Off */
+        CHECK(solo_arp_last_mode_get() == 4, "still remembers Random mode after Off");
+        /* Capture 3 keys */
+        uint32_t mask3 = (1u << (60 - 53)) | (1u << (64 - 53)) | (1u << (67 - 53));
+        solo_arp_capture_keys(mask3);
+        solo_arp_hold_set(1);
+        CHECK((solo_arp_latched_keys() & (1u << (60 - 53))) != 0, "Captured note 60");
+        CHECK((solo_arp_latched_keys() & (1u << (64 - 53))) != 0, "Captured note 64");
+        CHECK((solo_arp_latched_keys() & (1u << (67 - 53))) != 0, "Captured note 67");
+        solo_panic();
+
+        /* Test interactive toggle editing */
+        solo_load_preset(10);
+        solo_arp_hold_set(1);
+        solo_arp_toggle_note(60);
+        CHECK((solo_arp_latched_keys() & (1u << (60 - 53))) != 0, "Toggle on note 60");
+        solo_arp_toggle_note(64);
+        CHECK((solo_arp_latched_keys() & (1u << (64 - 53))) != 0, "Toggle on note 64");
+        solo_arp_toggle_note(67);
+        CHECK((solo_arp_latched_keys() & (1u << (67 - 53))) != 0, "Toggle on note 67");
+        /* Remove note 64 */
+        solo_arp_toggle_note(64);
+        CHECK((solo_arp_latched_keys() & (1u << (64 - 53))) == 0, "Toggle off note 64");
+        CHECK((solo_arp_latched_keys() & (1u << (60 - 53))) != 0, "Note 60 still active");
+        CHECK((solo_arp_latched_keys() & (1u << (67 - 53))) != 0, "Note 67 still active");
+        /* Remove remaining notes */
+        solo_arp_toggle_note(60);
+        solo_arp_toggle_note(67);
+        CHECK(solo_arp_latched_keys() == 0, "All notes toggled off");
+        /* Test upper octave (C5..G5, keys 19..26) */
+        solo_load_preset(10);
+        solo_arp_hold_set(1);
+        solo_arp_toggle_note(72); /* C5, key 19 */
+        solo_arp_toggle_note(79); /* G5, key 26 */
+        CHECK((solo_arp_latched_keys() & (1u << (72 - 53))) != 0, "Upper octave C5 (key 19) is lit");
+        CHECK((solo_arp_latched_keys() & (1u << (79 - 53))) != 0, "Upper octave G5 (key 26) is lit");
+        /* Verify background rendering continues while hold is on */
+        solo_render(l, r, es, rs, 64);
+        CHECK(solo_arp_hold_get() == 1, "Hold persists for background playback");
+        CHECK(solo_arp_latched_keys() != 0, "Latched keys persist in background");
+        solo_arp_hold_set(0);
+        CHECK(solo_arp_latched_keys() == 0, "Cleared when hold turned off");
+
+        /* Test solo_arp_stop */
+        solo_load_preset(10);
+        solo_arp_hold_set(1);
+        solo_arp_toggle_note(60);
+        solo_arp_toggle_note(64);
+        solo_arp_toggle_note(67);
+        CHECK(solo_get(SP_ARP_MODE) > 0, "Arp active");
+        CHECK(solo_arp_latched_keys() != 0, "Latched keys active");
+        solo_set(SP_ARP_MODE, 0);
+        solo_arp_stop();
+        CHECK(solo_get(SP_ARP_MODE) == 0, "Arp mode is 0 (off)");
+        CHECK(solo_arp_latched_keys() == 0, "No latched keys after stop");
+        CHECK(solo_arp_hold_get() == 0, "Hold is off after stop");
+
+        /* Test turn K1 to Up then press ARP */
+        solo_set(SP_ARP_MODE, 1);
+        solo_arp_hold_set(0);
+        CHECK(solo_arp_hold_get() == 0, "Hold is 0 after selecting mode on K1");
+        /* Press ARP when hold is 0 -> turns ON */
+        solo_arp_hold_set(1);
+        CHECK(solo_arp_hold_get() == 1, "Hold engaged after ARP press");
+        /* Press ARP when hold is 1 -> turns OFF */
+        solo_set(SP_ARP_MODE, 0);
+        solo_arp_stop();
+        CHECK(solo_get(SP_ARP_MODE) == 0, "Arp stopped after second ARP press");
+        CHECK(solo_arp_hold_get() == 0, "Hold off after second ARP press");
+
+        /* Test preset switching while Arp Hold is active */
+        solo_load_preset(10); /* Astral */
+        solo_arp_hold_set(1);
+        solo_arp_toggle_note(60);
+        solo_arp_toggle_note(64);
+        CHECK(solo_arp_hold_get() == 1, "Hold active before preset switch");
+        CHECK(solo_arp_latched_keys() != 0, "Latched keys active before preset switch");
+        solo_load_preset(0); /* Switch to Pure */
+        CHECK(solo_arp_hold_get() == 1, "Hold remains active after switching to Pure");
+        CHECK(solo_get(SP_ARP_MODE) > 0, "Arp mode preserved when switching to Pure");
+        CHECK(solo_arp_latched_keys() != 0, "Latched keys preserved when switching to Pure");
+        /* Switch preset when Hold is OFF -> Arp stopped */
+        solo_arp_hold_set(0);
+        solo_load_preset(1); /* Switch to Mallet */
+        CHECK(solo_get(SP_ARP_MODE) == 0, "Arp stopped when loading Mallet without hold");
+        CHECK(solo_arp_latched_keys() == 0, "Latched keys cleared without hold");
+
+        /* Test solo_get_and_clear_triggered_note */
+        solo_panic();
+        CHECK(solo_get_and_clear_triggered_note() == 0, "Triggered note 0 after panic");
+        solo_note(65, 100, 1);
+        CHECK(solo_get_and_clear_triggered_note() == 65, "Note 65 triggered");
+        CHECK(solo_get_and_clear_triggered_note() == 0, "Cleared after read");
+        solo_note(65, 0, 0);
+
+        solo_panic();
+    }
 
     printf(fails ? "amb: %d FAILED\n" : "amb: ok\n", fails);
     return fails != 0;
