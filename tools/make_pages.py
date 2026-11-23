@@ -1,176 +1,126 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MPL-2.0
-# Copyright (C) 2026 Charles Vestal
-"""Make the AMB-1 site for GitHub Pages (https://charlesvestal.github.io/fm1-amb/):
+"""Make the AURA-1 site for GitHub Pages.
 
-  index.html                  what AMB-1 is, and the ways in: try, install, manual, download, source
+  index.html                  AURA-1 Quiet studio landing page
   img/                        screenshots (docs/img)
-  emu/                        AMB-1 in the browser (app/build/emu, from ./build.sh --web)
+  emu/                        AURA-1 in the browser (app/build/emu, from tools/build_web.ps1 or ./build.sh --web)
   words/                      the screen reader's words files (app/web/words, from app/words.tsv)
-  install/index.html          fm1-base's web installer (base/web/installer.html, with fm1ports.js, fm1pkg.js, fm1ota.js and
-                              the package's metadata inlined; Chrome or Edge, Web MIDI)
-  manual/index.html, img/     the manual (fm1-base's tools/manual_html.py, from docs/MANUAL.md)
-  firmware/amb-VERSION.fwsc   the package the installer writes; also the download
+  install/index.html          Web MIDI installer in the shared studio layout
+  manual/index.html, img/     Illustrated studio guide (tools/theme_manual.py)
+  firmware/aura-VERSION.fwsc  packaged firmware
 
-  tools/make_pages.py app/build/amb-1.0.fwsc 1.0 OUT_DIR
-
-The package must be a release build (./build.sh --release X.Y): its identity, FM-1_7XXYYZZ, is what
-the installer checks the download against and what the FM-1 reports after the install."""
-import hashlib
+Usage:
+  tools/make_pages.py [PKG] [VERSION] [OUT_DIR]
+"""
 import html
-import json
+import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from make_installer import DEFAULT_PACKAGE, build_installer, package_info
+from project_config import REPO
 
 SRC = Path(__file__).resolve().parents[1]
 BASE = SRC / "base"
-sys.path.insert(0, str(BASE / "tools"))
-from make_site import MBOOT_VERSION, product_of, read_conf, strip_module  # noqa: E402  (fm1-base's: the package format)
 
-REPO = "https://github.com/charlesvestal/fm1-amb"
-
-LANDING = """<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AMB-1 · An ambient garden for the FM-1</title>
-<meta name="description" content="A generative ambient machine for the M-VAVE FM-1, inspired by Brian Eno's Music for Airports: breathing voices, bells on tape loops of unequal length, a slow tide.">
-<meta name="theme-color" content="#fdf9e4">
-<style>
-/* the colours of Ambient 1: Music for Airports (1978), as the manual: the page a shade lighter than the
-   cover's paper, so the screenshots (on that paper) stand out; the cover's paper for the cards */
-:root { --paper: #fdf9e4; --sheet: #f6eeb5; --green-1: #d0dc92; --green-3: #9cb16f; --river: #85c3c1; --river-2: #3b7470;
-        --ink: #1d1b02; --muted: #49451f; --rule: #c2ce7f; color-scheme: light; }
-/* --river-2 and --muted a shade darker than the cover's, so text in them reads (4.5:1 on the paper and the cards) */
-body { background: var(--paper); color: var(--ink); margin: 0; padding-inline: 16px; padding-block: 48px 64px;
-       font: 400 17px/1.6 "Helvetica Neue", Helvetica, Arial, sans-serif; }
-main { max-width: 42rem; margin: 0 auto; }
-h1 { font-size: 3rem; font-weight: 300; line-height: 1; letter-spacing: .06em; margin: 0 0 .3rem; }
-.sub { text-transform: uppercase; letter-spacing: .08em; font-size: .9rem; margin: 0 0 1.2rem; padding-bottom: .8rem; border-bottom: 1px solid var(--ink); }
-h2 { font-size: 1.1rem; font-weight: 400; text-transform: uppercase; letter-spacing: .06em; margin: 2.4rem 0 .6rem;
-     padding-top: .6rem; border-top: 1px solid var(--ink); }
-.lede { font-size: 1.15rem; margin: 0 0 1.6rem; max-width: 36rem; }
-.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 1.8rem; }
-.shots img { width: 100%; height: auto; image-rendering: pixelated; border: 1px solid var(--ink); }
-.ways { display: grid; gap: 10px; margin: 0 0 1rem; }
-.ways a { display: block; text-decoration: none; color: var(--ink); background: var(--sheet); border: 1px solid var(--ink); padding: 12px 16px; }
-.ways a:first-child { background: var(--river); }
-.ways a:hover, .ways a:focus-visible { background: var(--green-1); }
-.ways a:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
-a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.ways strong { font-weight: 400; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .05em; display: block; }
-.ways span { color: var(--muted); font-size: .95rem; }
-.ways em.v { font-style: normal; text-transform: none; letter-spacing: 0; }
-ul.garden { padding-left: 1.2rem; margin: 0 0 1rem; }
-ul.garden li { margin: 0 0 .4rem; }
-ul.garden li::marker { color: var(--river-2); }
-p.small { color: var(--muted); font-size: .9rem; }
-a { color: var(--ink); text-decoration-color: var(--river-2); text-decoration-thickness: 2px; text-underline-offset: 3px; }
-code { font-size: .9em; }
-</style>
-</head>
-<body>
-<main>
-<h1>AMB-1</h1>
-<p class="sub">An ambient garden for the M-VAVE FM-1</p>
-<p class="lede">AMB-1 is a generative ambient machine, inspired by Brian Eno's <i>Music for Airports</i>. Switch
-it on and it starts playing by itself. You don't perform it so much as tend it: pick a piece and a scale, take
-notes out, put them back, and let it grow.</p>
-<div class="shots">
-  <img src="img/screen-garden.png" width="240" height="240" alt="AMB-1's screen: the scale as a ring with the chord Dm7, the four bell loops around it, the pulse rings on the right">
-  <img src="img/screen-voices.png" width="240" height="240" alt="AMB-1's screen: the piece Voices, F Aeolian, the chord Fm7">
-  <img src="img/screen-frozen.png" width="240" height="240" alt="AMB-1's screen: frozen, the chord held">
-</div>
-<nav class="ways" aria-label="Get AMB-1">
-  <a href="emu/"><strong>Try it in the browser</strong><span>Listen right here, and play it with a mouse, a touch screen or the keyboard. It runs the same code as the FM-1, so you don't need one.</span></a>
-  <a href="install/"><strong>Install <em class="v">v__VERSION__</em></strong><span>Connect your FM-1 by USB and install from Chrome or Edge. There's nothing to install on your computer.</span></a>
-  <a href="manual/"><strong>Manual</strong><span>Get started in a few minutes, then read about everything else.</span></a>
-  <a href="firmware/__PKG__"><strong>Download <em class="v">__PKG__</em></strong><span>For the command-line installer: <code>python3 base/tools/fm1_install.py __PKG__</code></span></a>
-  <a href="__REPO__"><strong>Source</strong><span>On GitHub under MPL-2.0. Built on fm1-base and felucca-bsp, which grew out of Felucca by Hügelton Instruments.</span></a>
-</nav>
-
-<h2>The garden</h2>
-<ul class="garden">
-  <li>The <b>pad</b> is four breathing voices, a Rhodes or sung voices. Each one swells and fades on its own cycle, so the chord forms and dissolves, and now and then it drifts to another chord in the scale.</li>
-  <li>Soft FM <b>bells</b> play from four tape loops 13, 17, 23 and 29 beats long. The loops slide against each other, so the melody never quite repeats.</li>
-  <li>The <b>bass</b> plays the chord's root, low and gliding.</li>
-  <li>The <b>pulse</b> is a thump and two hats on Euclidean patterns of 16, 12 and 7 steps.</li>
-  <li>The <b>space</b> is a tape echo, a long tape loop and a plate reverb, and it's most of what you hear. Press REC to freeze the chord and let the reverb ring on forever.</li>
-</ul>
-<p>Choose from eight pieces, and each one remembers how you left it. The keys are the scale: press one to take
-its note out or put it back. A slow tide between sparse and full, with rests now and then, keeps it moving for
-hours.</p>
-<p class="small">To go back to the official firmware, use "Back to the stock firmware" in the installer, or
-M-VAVE's own updater, M-UPGRADE, from <a href="https://www.m-vave.com/download">m-vave.com/download</a>.
-M-VAVE and FM-1 are trademarks of their owners. AMB-1 is not affiliated with M-VAVE or Brian Eno.</p>
-</main>
-</body>
-</html>
-"""
+LANDING = (SRC / "web/site/index.html").read_text(encoding="utf-8")
 
 
-def main(pkg, version, out):
-    pkg, out = Path(pkg), Path(out)
-    raw = pkg.read_bytes()
-    product = product_of(raw)
-    if not re.fullmatch(r"FM-1_7\d{6}", product):
-        raise SystemExit(f"{pkg}: identity {product!r}: make a release build (./build.sh --release X.Y)")
-    if b"FELUCCA-LOADER-1" not in raw:
-        raise SystemExit(f"{pkg}: no update loader in it")
-    name = f"amb-{re.sub(r'[^A-Za-z0-9.-]', '-', version)}.fwsc"
+
+def main(pkg=None, version=None, out=None):
+    pkg_path = Path(pkg) if pkg else DEFAULT_PACKAGE
+    conf, _, version = package_info(pkg_path, version)
+    pkg_filename = f"aura-{version}.fwsc"
+    repo = REPO
+    name = conf.get("name", "AURA-1")
+
+    out = Path(out) if out else (SRC / "app" / "build" / "pages")
     if out.exists():
         shutil.rmtree(out)
     for d in ("install", "manual", "firmware"):
         (out / d).mkdir(parents=True)
-    shutil.copy(pkg, out / "firmware" / name)
-    # the installer: fm1-base's page, filled in from app/fm1.toml
-    conf = read_conf(SRC / "app" / "fm1.toml")
-    page = (BASE / "web" / "installer.html").read_text(encoding="utf-8")
-    lib = "\n".join(strip_module((BASE / "web" / f).read_text(encoding="utf-8"))   # (fm1ota.js asks fm1ports.js's)
-                    for f in ("fm1ports.js", "fm1pkg.js", "fm1ota.js"))
-    # m-bootloader (MIT), which the installer offers to install after AMB-1, with its licence (as fm1-base's make_site)
-    boot = BASE / "web" / "m-bootloader" / f"fm1-uboot-{MBOOT_VERSION}.fwsc"
-    boot_name = f"m-bootloader-{MBOOT_VERSION}.fwsc"
-    shutil.copy(boot, out / "firmware" / boot_name)
-    shutil.copy(BASE / "web" / "m-bootloader" / "LICENSE", out / "firmware" / "m-bootloader-LICENSE.txt")
-    meta = json.dumps({"version": version, "product": product, "pkg": "../firmware/" + name,
-                       "backup": bool(conf.get("backup")),
-                       "boot": {"pkg": "../firmware/" + boot_name, "version": MBOOT_VERSION,
-                                "sha256": hashlib.sha256(boot.read_bytes()).hexdigest()}})
-    for mark in ("/*LIB*/", "/*META*/", "/*APP*/"):
-        if page.count(mark) != 1:
-            raise SystemExit(f"base/web/installer.html must contain {mark} once")
-    for key, val in (("NAME", "AMB-1"), ("REPO", REPO), ("REPO_SHORT", re.sub(r"^https?://", "", REPO)),
-                     ("LICENSE", conf.get("licence", "MPL-2.0")), ("CREDITS", " " + conf.get("credits", ""))):
-        page = page.replace("{{" + key + "}}", val)
-    # the firmware's own steps around an install (fm1.toml install_app; base/web/installer.html APP): AMB-1 has none
-    app_js = (SRC / "app" / conf["install_app"]).read_text(encoding="utf-8") if conf.get("install_app") else "null"
-    (out / "install" / "index.html").write_text(page.replace("/*LIB*/", lib).replace("/*META*/", meta)
-                                                .replace("/*APP*/", app_js), encoding="utf-8")
-    # the manual (a complete page; its images beside it)
-    subprocess.run([sys.executable, str(BASE / "tools" / "manual_html.py"), str(SRC / "docs" / "MANUAL.md"),
-                    str(out / "manual" / "index.html"), "--name", "AMB-1", "--repo", REPO,
-                    "--tagline", conf.get("tagline", "")], check=True, capture_output=True)
-    shutil.copytree(SRC / "docs" / "img", out / "manual" / "img")
-    # the landing page and its screenshots
-    shutil.copytree(SRC / "docs" / "img", out / "img")
-    (out / "index.html").write_text(LANDING.replace("__VERSION__", html.escape(version)).replace("__PKG__", name)
-                                    .replace("__REPO__", REPO), encoding="utf-8")
-    emu = SRC / "app" / "build" / "emu"
-    if not (emu / "app.wasm").exists():
-        raise SystemExit("no app/build/emu/app.wasm: run ./build.sh --web (needs Emscripten)")
-    shutil.copytree(emu, out / "emu")
-    # the screen reader's words files (fm1-reader): every one ever made, for the devices that point at them
-    shutil.copytree(SRC / "app" / "web" / "words", out / "words")
+
+    shutil.copy(pkg_path, out / "firmware" / pkg_filename)
+
+    # 1. Web Installer
+    build_installer(package=pkg_path, version=version, pkg_name=pkg_filename)
+    for boot_file in (SRC / "firmware").glob("m-bootloader-*"):
+        shutil.copy(boot_file, out / "firmware" / boot_file.name)
+    shutil.copy(SRC / "install" / "index.html", out / "install" / "index.html")
+
+    # 2. The illustrated guide
+    manual_html_py = BASE / "tools" / "manual_html.py"
+    sub_env = {**os.environ, "PYTHONUTF8": "1"}
+    if manual_html_py.exists():
+        subprocess.run([sys.executable, str(manual_html_py), str(SRC / "docs" / "MANUAL.md"),
+                        str(out / "manual" / "index.html"), "--name", name, "--repo", repo,
+                        "--tagline", conf.get("tagline", "")], env=sub_env, check=True, capture_output=True)
+        theme_script = SRC / "tools" / "theme_manual.py"
+        if theme_script.exists():
+            subprocess.run([sys.executable, str(theme_script), str(out / "manual" / "index.html")], env=sub_env, check=True)
+
+    if (SRC / "docs" / "img").exists():
+        from studio_site import copy_manual_images
+        copy_manual_images(out / "manual/img")
+        copy_manual_images(out / "img")
+
+    from studio_site import copy_assets, header, footer, head
+    copy_assets(out)
+
+    # 3. The Landing Page
+    landing_content = LANDING.replace("__VERSION__", html.escape(version)) \
+                             .replace("__PKG__", pkg_filename) \
+                             .replace("__REPO__", repo)
+    landing_content = landing_content.replace("__STUDIO_HEAD__", head("AURA-1 turns the M-VAVE FM-1 into a generative ambient instrument. Listen in your browser, play along, or install the open firmware."))
+    landing_content = landing_content.replace("__STUDIO_HEADER__", header()).replace("__STUDIO_FOOTER__", footer())
+    (out / "index.html").write_text(landing_content, encoding="utf-8")
+    from studio_site import SITE
+    error_page = (SRC / "web/site/404.html").read_text(encoding="utf-8")
+    error_page = error_page.replace("<head>", '<head><base href="' + SITE + '">')
+    error_page = error_page.replace("__STUDIO_HEAD__", head("This AURA-1 page could not be found. Return to the studio, instrument or illustrated guide.", "404.html"))
+    error_page = error_page.replace("__STUDIO_HEADER__", header()).replace("__STUDIO_FOOTER__", footer()).replace("__UP__", "./")
+    (out / "404.html").write_text(error_page, encoding="utf-8")
+
+    # 4. Emulator PWA
+    emu_src = SRC / "app/build/emu" if (SRC / "app/build/emu/app.wasm").exists() else SRC / "emu"
+    if emu_src.exists():
+        shutil.copytree(emu_src, out / "emu", dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("o2", "web", "*.wav", "rain-*.html", "three.min.js", "aura-shader.js", "gsap.min.js", "GSAP-NOTICE.md"))
+        from studio_site import prepare_emulator
+        prepare_emulator(out / "emu")
+        # Inject build timestamp into Service Worker for seamless PWA cache updates
+        sw_out = out / "emu" / "sw.js"
+        if sw_out.exists():
+            import datetime
+            ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S")
+            sw_code = sw_out.read_text(encoding="utf-8")
+            sw_code = re.sub(r"const CACHE_NAME = ['\"][^'\"]+['\"];",
+                             f"const CACHE_NAME = 'aura-v{version}-{ts}';",
+                             sw_code)
+            sw_out.write_text(sw_code, encoding="utf-8")
+
+    # 5. Words for fm1-reader
+    if (SRC / "app" / "web" / "words").exists():
+        shutil.copytree(SRC / "app" / "web" / "words", out / "words", dirs_exist_ok=True)
+
+    paths = ["", "emu/", "manual/", "install/"]
+    from studio_site import SITE
+    (out / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE}sitemap.xml\n", encoding="utf-8")
+    (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' +
+                                     ''.join(f'<url><loc>{SITE}{path}</loc></url>' for path in paths) + '</urlset>', encoding="utf-8")
+    # Retire the worker from the earlier local emulator-at-root server layout.
+    (out / "sw.js").write_text("self.addEventListener('install',()=>self.skipWaiting());\nself.addEventListener('activate',event=>event.waitUntil(self.registration.unregister()));\n", encoding="utf-8")
+    # 6. GitHub Pages .nojekyll
     (out / ".nojekyll").write_text("")
-    print(f"site: {out}: index.html, install/ ({product}), manual/, emu/, words/, firmware/{name} ({len(raw)} B)")
+
+    print(f"Site generated successfully in {out}")
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        sys.exit(__doc__)
-    main(*sys.argv[1:4])
+    pkg_arg = sys.argv[1] if len(sys.argv) > 1 else None
+    ver_arg = sys.argv[2] if len(sys.argv) > 2 else None
+    out_arg = sys.argv[3] if len(sys.argv) > 3 else str(SRC / "app" / "build" / "pages")
+    main(pkg_arg, ver_arg, out_arg)

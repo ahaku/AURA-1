@@ -3,8 +3,8 @@
 # Copyright (C) 2026 Charles Vestal
 """The manual's map of the controls, drawn (no photographs: M-VAVE's and Felucca's are not ours to use):
 
-  docs/img/fm1-panel.svg   the FM-1 front panel, AMB-1's real screen in it, each control labelled with
-                           what it does in AMB-1, the keys with their notes
+  docs/img/fm1-panel.svg   the FM-1 front panel, AURA-1's real screen in it, each control labelled with
+                           what it does in AURA-1, the keys with their notes
 
   tools/gen_manual_figures.py [SCREEN.png]     (default docs/img/screen-garden.png)
 
@@ -48,7 +48,7 @@ def what(x, y, t):
 
 
 def knob(x, y, r, label, does=None):
-    """a knob: its name above, what it does in AMB-1 below"""
+    """a knob: its name above, what it does in AURA-1 below"""
     return (f'<g><circle cx="{x}" cy="{y}" r="{r + 5}" fill="{TRAY}"/>'
             f'<circle cx="{x}" cy="{y}" r="{r}" fill="{KNOB}" stroke="#44474c" stroke-width="2"/>'
             f'<line x1="{x}" y1="{y - r + 5}" x2="{x}" y2="{y - r + 15}" stroke="{LABEL}" stroke-width="3" stroke-linecap="round"/>'
@@ -88,7 +88,7 @@ STYLE = (f"<style>.lbl{{font:600 16px {FONT};fill:{LABEL};letter-spacing:.06em}}
 def panel(screen_png):
     W, H = 1000, 720
     s = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" role="img" '
-         f'aria-label="The FM-1 front panel running AMB-1, each control labelled with what it does">', STYLE,
+         f'aria-label="The FM-1 front panel running AURA-1, each control labelled with what it does">', STYLE,
          f'<rect x="4" y="4" width="{W - 8}" height="{H - 8}" rx="44" fill="{BODY}"/>',
          knob(105, 92, 24, "MASTER", "Volume"), knob(215, 92, 24, "SELECT", "Page|HOME + it: tempo"),
          knob(105, 210, 24, "PRESETS", "Piece"), knob(215, 210, 24, "ALGORITHM", "Mode"),
@@ -101,7 +101,7 @@ def panel(screen_png):
         s.append(knob(610 + i * 104, 92, 22, f"KNOB{i + 1}"))
     s.append(what(766, 136, "The page's four values (KNOB1: a layer's level)"))
     s.append(f'<rect x="568" y="146" width="400" height="236" rx="18" fill="{TRAY}"/>')
-    top = [("FX", "Space"), ("SEL", ""), ("ENV", "Pad"), ("LFO", "Bass"), ("EDIT", "Next|chord"), ("GLO", "Setup")]
+    top = [("FX", "Space"), ("SEL", "Solo"), ("ENV", "Pad"), ("LFO", "Bass /|Bowls"), ("EDIT", "Next|Random"), ("GLO", "Setup")]
     bot = [("HOME", "Garden"), ("SAVE", "Save, hold:|recipe"), ("ARP", "Bells"), ("SEQ", "Pulse"),
            (("PLAY", "STOP"), "Grow /|rest"), ("REC", "Freeze")]
     for i in range(6):
@@ -122,7 +122,7 @@ def panel(screen_png):
 
 def main():
     screen = Path(sys.argv[1]) if len(sys.argv) > 1 else OUT / "screen-garden.png"
-    (OUT / "fm1-panel.svg").write_text(panel(screen))
+    (OUT / "fm1-panel.svg").write_text(panel(screen), encoding="utf-8")
     print(f"figure: {OUT / 'fm1-panel.svg'}")
 
 

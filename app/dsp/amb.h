@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MPL-2.0
  * Copyright (C) 2026 Charles Vestal */
-/* The instrument: a generative ambient garden. Four layers draw on one pool of notes (a scale:
+/* The instrument: a generative ambient garden. The layers draw on one pool of notes (a scale:
  * the root plus up to eleven more pitch classes) and one chord that drifts slowly through it:
  *
  *   PAD     four breathing voices: each swells in, hangs and fades on its own cycle (unequal lengths,
@@ -13,6 +13,7 @@
  *           quarter notes), each holding a short phrase that shifts against the others, each its own
  *           shade of bell. EVOLVE changes a note now and then; DENSITY sets how many notes a loop holds.
  *   BASS    a sine and its sub-octave on the chord's root (now and then its fifth), gliding.
+ *   BOWLS   singing bowls with slowly beating fundamentals and long, overlapping resonances.
  *   PULSE   a soft thump, a closed hat and an open hat, each on its own Euclidean pattern (16, 12 and 7
  *           sixteenths): polyrhythms. HITS sets how many; the patterns turn and change around it.
  *
@@ -37,8 +38,21 @@
 #define EN_NPAD 4                      /* pad voices */
 
 /* modes: pools relative to the root (bit i: root + i semitones) */
-enum { MODE_IONIAN, MODE_DORIAN, MODE_PHRYGIAN, MODE_LYDIAN, MODE_MIXOLYDIAN, MODE_AEOLIAN, MODE_PENT_MAJ,
-       MODE_PENT_MIN, EN_NMODES };
+enum {
+    MODE_IONIAN,
+    MODE_DORIAN,
+    MODE_PHRYGIAN,
+    MODE_LYDIAN,
+    MODE_MIXOLYDIAN,
+    MODE_AEOLIAN,
+    MODE_PENT_MAJ,
+    MODE_PENT_MIN,
+    MODE_HIRAJOSHI,
+    MODE_INSEN,
+    MODE_WHOLE_TONE,
+    MODE_LYDIAN_DOM,
+    EN_NMODES
+};
 extern const char *const EN_MODE_NAME[EN_NMODES];
 extern const uint16_t EN_MODE_POOL[EN_NMODES];
 extern const char *const EN_NOTE_NAME[12];
@@ -55,6 +69,8 @@ enum {
     P_PADTONE,                                        /* the pad's colour, set by the piece: Rhodes, Voices */
     P_BASSOCT, P_GLIDE, P_FIFTH,                      /* bass: its octave, its glide, how often it leans on the fifth */
     P_SWING, P_HATS,                                  /* pulse: swing, the hats' colour */
+    P_TEXT_VOL, P_TEXT_TYPE, P_TEXT_TONE, P_TEXT_DENS,/* atmospheric texture */
+    P_BOWLS_VOL, P_BOWLS_MODE, P_BOWLS_OCT, P_BOWLS_BLUR, /* singing bowls */
     P_NPARAMS
 };
 typedef struct {
@@ -78,6 +94,13 @@ void en_regrow(void);                          /* a new piece: fresh loops, the 
 enum { EN_CLK_TICK, EN_CLK_START, EN_CLK_CONTINUE, EN_CLK_STOP };
 void en_clock(int msg);
 
+#include "solo.h"
+/* solo play mode commands */
+void en_solo_note(uint8_t note, uint8_t vel, uint8_t on);
+void en_solo_set(int param, int val);
+void en_solo_panic(void);
+void en_solo_reset(void);
+
 /* the render (audio ISR): n stereo frames, 24-bit in int32; gain Q12 (the MASTER pot) */
 void en_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);
 
@@ -90,7 +113,7 @@ extern volatile uint8_t en_chord[EN_NPAD];     /* the chord's notes (MIDI), pad 
 extern volatile uint8_t en_chord_root;         /* the chord's root, MIDI pitch class 0..11 */
 extern volatile uint8_t en_chord_n;            /* its distinct tones: 3 or 4 */
 extern volatile float en_drift;                /* 0..1: how far to the next chord */
-extern volatile float en_pad_level, en_bass_level;
+extern volatile float en_pad_level, en_bass_level, en_bowls_level;
 extern volatile uint8_t en_loop_pos[EN_NLOOP];
 extern volatile int8_t en_loop_note[EN_NLOOP][EN_LOOP_MAX];   /* -1 rest, else the slot's offset */
 extern volatile float en_loop_glow[EN_NLOOP];  /* 0..1: a bell just rang from this loop */
@@ -113,6 +136,6 @@ void en_voice_lead(const int *from, const int *pcs, int ntones, int *to, int lo,
 const char *en_chord_name(const int *pcs, int n, char *buf);   /* "Em7", "Dsus4", "C" ... */
 
 /* the pieces: recipes for every parameter (Tune and MIDI out included, but they are the player's) */
-#define EN_NPIECES 8
+#define EN_NPIECES 16
 const char *en_piece_name(int i);
 void en_piece(int i, int16_t *par, uint16_t *pool);

@@ -6,8 +6,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f6eeb5">
-<title>AMB-1 · A generative ambient garden</title>
-<meta name="description" content="AMB-1: a generative ambient garden.">
+<title>AURA-1 · Generative Ambient Universe</title>
+<meta name="description" content="AURA-1: a generative ambient universe.">
 <style>
 /* the colours of Ambient 1: Music for Airports (1978): the map's paper, its greens, its rivers, the ink */
 :root {
@@ -66,7 +66,7 @@ td.v { width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; }
 <body>
 <div id="page">
 <main>
-<h1>AMB-1</h1>
+<h1>AURA-1</h1>
 <p id="sub">A generative ambient garden</p>
 <hr>
 
@@ -111,12 +111,14 @@ td.v { width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; }
 // ------------------------------------------------------------------ the engine's names (amb.h)
 const P = { PAD: 0, BELLS: 1, BASS: 2, PULSE: 3, DENSITY: 4, EVOLVE: 5, DRIFT: 6, HITS: 7, ECHO: 8, ETIME: 9, REVERB: 10, SIZE: 11,
             BRIGHT: 12, SWELL: 13, BTONE: 14, MOTION: 15, TUNE: 16, MIDI: 17, TEMPO: 18, ROOT: 19, MODE: 20, BOCT: 21, PADTONE: 22,
-            BASSOCT: 23, GLIDE: 24, FIFTH: 25, SWING: 26, HATS: 27 };
+            BASSOCT: 23, GLIDE: 24, FIFTH: 25, SWING: 26, HATS: 27,
+            TEXT_VOL: 28, TEXT_TYPE: 29, TEXT_TONE: 30, TEXT_DENS: 31 };
 const NLOOP = 4, LOOP_MAX = 29;
 const STORE = "eno-app-1";
 // the layers, as the FM-1's pages: [parameter, its name there]
 const GROUPS = [
   ["Garden", [[P.EVOLVE, "Evolve"], [P.MOTION, "Motion"], [P.DRIFT, "Drift"]]],
+  ["Texture", [[P.TEXT_VOL, "Level"], [P.TEXT_TYPE, "Type"], [P.TEXT_TONE, "Tone"], [P.TEXT_DENS, "Density"]]],
   ["Pad", [[P.PAD, "Level"], [P.SWELL, "Swell"], [P.BRIGHT, "Bright"]]],
   ["Bells", [[P.BELLS, "Level"], [P.DENSITY, "Density"], [P.BTONE, "Tone"]]],
   ["Bass", [[P.BASS, "Level"], [P.BASSOCT, "Octave"], [P.GLIDE, "Glide"], [P.FIFTH, "Fifth"]]],
@@ -128,7 +130,9 @@ const TIP = { [P.DENSITY]: "notes per bell loop", [P.EVOLVE]: "how often things 
               [P.SIZE]: "plate decay, echo feedback", [P.BRIGHT]: "pad filter", [P.SWELL]: "breath length",
               [P.BTONE]: "round to metallic", [P.MOTION]: "how far it drifts and swells", [P.BASSOCT]: "the bass an octave down or up",
               [P.GLIDE]: "how slowly the bass slides to its note", [P.FIFTH]: "how often the bass leans on the fifth",
-              [P.SWING]: "the off sixteenths late", [P.HATS]: "dark and long to bright and crisp" };
+              [P.SWING]: "the off sixteenths late", [P.HATS]: "dark and long to bright and crisp",
+              [P.TEXT_VOL]: "atmospheric background texture level", [P.TEXT_TYPE]: "rain, wind, vinyl, ocean waves",
+              [P.TEXT_TONE]: "texture brightness and tone", [P.TEXT_DENS]: "event density and motion" };
 const $ = (id) => document.getElementById(id);
 // names in words, as the FM-1's screen reader says them (ui.c CHORD_Q, firmware/words.tsv)
 const SPOKEN_NOTE = { "C#": "C sharp", "Eb": "E flat", "F#": "F sharp", "Ab": "A flat", "Bb": "B flat" };
@@ -318,7 +322,7 @@ function setPlaying(on) {
 }
 function mediaSession() {
   if (!navigator.mediaSession || !window.MediaMetadata) return;
-  navigator.mediaSession.metadata = new MediaMetadata({ title: pieceName(S.piece), artist: "AMB-1" });
+  navigator.mediaSession.metadata = new MediaMetadata({ title: pieceName(S.piece), artist: "AURA-1" });
   try {
     navigator.mediaSession.setActionHandler("play", () => setPlaying(true));
     navigator.mediaSession.setActionHandler("pause", () => setPlaying(false));

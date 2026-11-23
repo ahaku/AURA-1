@@ -7,7 +7,8 @@
 #include "plat.h"
 #include "amb.h"
 
-#define APP_NAME "AMB-1"
+#define APP_NAME "AURA-1"
+#define APP_WEB                            /* app/web.c exports browser-only controls */
 #define APP_BLOCK 256u                   /* frames per audio block: 5.8 ms at 44.1 kHz */
 #ifdef APP_VERSION                       /* a release build passes its own (tools/build.py --release) */
 #define EN_VERSION APP_VERSION
@@ -20,8 +21,7 @@
 enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
 #define APP_STORE_MAP {0xFC000u, 0xDC000u}
 #define PROJ_MAGIC 0x314F4E45u           /* "ENO1" */
-#define PROJ_FORMAT 4u                   /* 4: the bass's and the pulse's own settings (3 is carried over;
-                                          * older formats give the recipes) */
+#define PROJ_FORMAT 15u                  /* 15: singing bowl parameters */
 #define NPIECES EN_NPIECES
 
 typedef struct {
@@ -35,9 +35,12 @@ typedef struct {
     uint16_t pool;                       /* its scale, relative to the root (bit 0 = the root) */
     uint8_t leds;                        /* lights: 0 off, 1 keys and the buttons' glow, 2 keys only */
     uint8_t piece;                       /* which piece */
-    uint8_t rsv0[2];
+    uint8_t solo_preset;                 /* active solo preset index (0..5) */
+    uint8_t is_random;                   /* 1 if active playing piece was randomized */
     slot_t slot[NPIECES];                /* every piece as it was left (Tune and MIDI out are global) */
-    uint8_t rsv[16];                     /* room to grow */
+    solo_preset_t solo_user_preset;      /* single User preset */
+    uint16_t random_slots;               /* bitmask of randomized piece slots (0..15) */
+    uint8_t rsv[6];                      /* room to grow */
 } project_t;
 
 extern project_t proj;
@@ -46,6 +49,7 @@ void project_defaults(void);
 int project_load(void);                  /* 0 = loaded; else defaults are in place */
 int project_save(void);                  /* 0 = saved and verified */
 void project_apply(void);                /* every value to the engine (boot, load) */
+void project_solo_apply(void);           /* solo preset and user preset to engine (boot) */
 const char *piece_name(int i);
 void project_piece(int i);               /* the playing piece kept, piece i taken up as it was left */
 void project_piece_reset(void);          /* the playing piece back to its recipe */

@@ -25,6 +25,12 @@ int app_expect(const char *what, int *got)
         g = batt();
     else if (!strcmp(what, "dirty"))
         g = ui.dirty;
+    else if (!strcmp(what, "random"))
+        g = proj.is_random;
+    else if (!strcmp(what, "cosmic"))
+        g = ui.cosmic_mode;
+    else if (!strcmp(what, "solo"))
+        g = ui.solo_mode;
     else if (!strcmp(what, "sixteenths"))
         g = (int)en_bars;
     else if (!strcmp(what, "ext"))

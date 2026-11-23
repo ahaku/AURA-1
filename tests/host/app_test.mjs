@@ -11,7 +11,7 @@ if (ex._initialize) ex._initialize();
 const cstr = (p) => { const m = new Uint8Array(ex.memory.buffer); let e = p; while (m[e]) e++; return new TextDecoder().decode(m.subarray(p, e)); };
 let fails = 0;
 const check = (ok, what) => { if (!ok) { console.log("FAIL", what); fails++; } };
-check(ex.app_npieces() === 8, "eight pieces");
+check(ex.app_npieces() === 16, "sixteen pieces");
 check(cstr(ex.app_piece_name(2)) === "Voices", "piece 2 is Voices");
 check(ex.app_piece_par(1, 18) === 60, "Departures' tempo 60");
 check(cstr(ex.app_param_text(6, 100)) === "5:00", "Drift's text");

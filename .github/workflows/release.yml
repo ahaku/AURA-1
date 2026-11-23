@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
-# AMB-1's release: built from source on GitHub by the shared FM-1 builder, its packages signed with build
+# AURA-1's release: built from source on GitHub by the shared FM-1 builder, its packages signed with build
 # provenance (BUILDING.md, Publishing a release). From fm1-base's template, as LOOM-8's; after X0X's
 # (charlesvestal/fm1-x0x#25, by Kerem Kilic) and Melodee's (keremimo/melodee 4f5fb6d).
 name: Build and attest firmware
@@ -13,12 +13,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: amb-release-${{ github.ref }}
+  group: aura-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   prepare:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -26,7 +27,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          TITLE: AMB-1
+          TITLE: AURA-1
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF" != refs/tags/* ]]; then exit 0; fi
@@ -55,12 +56,13 @@ jobs:
       tests-block: true
       build: |
         set -euo pipefail
-        pkg=amb
+        pkg=aura-1
         # the builder checks out without submodules: fm1-base (base/) and its felucca-bsp (base/bsp/), at the
         # commits this one links
         git submodule update --init --recursive
         # the fonts' OpenType features (base/tools/gen_font.py): Pillow's raqm, which loads the system's FriBiDi
         sudo apt-get install -y -qq libfribidi0
+        python3 -m pip install -r requirements-ci.txt
         python3 -c "from PIL import features; assert features.check('raqm'), 'Pillow without raqm'"
         test "$(git -C "$AC79_SDK" rev-parse HEAD)" = d179b4484759423312073f5fbb232501aa491047
         # Emscripten for the .rfm1 (host apps: RemoteFM1), a fixed version from emsdk at a fixed commit
@@ -86,13 +88,13 @@ jobs:
           cp "app/build/$pkg.fwsc" build/release-assets/
           cp "app/build/$pkg.bin" "build/release-assets/$pkg-app.bin"
           ./build.sh --rfm1
-          cp app/build/rfm1/"$pkg"-dev+*.rfm1 "build/release-assets/$pkg.rfm1"
+          cp app/build/rfm1/"${pkg//-/_}"-dev+*.rfm1 "build/release-assets/$pkg.rfm1"
         fi
         # the firmware described for hubs (base/docs/FIRMWARE-JSON.md)
         cp app/build/firmware.json build/release-assets/
       test: |
         set -euo pipefail
-        pkg=amb
+        pkg=aura-1
         [ -f "app/build/$pkg.fwsc" ]
         sh tests/run_tests.sh
       packages: build/release-assets/*
@@ -100,11 +102,12 @@ jobs:
   verify:
     needs: firmware
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
       contents: write
       attestations: read
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: packages
           path: build/attested
