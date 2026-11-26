@@ -10,10 +10,20 @@ sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "base/tools"))
 from make_installer import package_info
 from project_config import CONFIG, REPO, SITE
-from studio_site import footer, head
+from studio_site import footer, head, prepare_emulator
 
 
 class PublicationTest(unittest.TestCase):
+    def test_clean_emulator_includes_reader_libraries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            prepare_emulator(output)
+            for name in ("words.js", "tts.js"):
+                self.assertEqual(
+                    (output / "reader" / name).read_bytes(),
+                    (ROOT / "app/web/emu/reader" / name).read_bytes(),
+                )
+
     def test_fork_locations_are_consistent(self):
         self.assertIn(REPO, footer())
         self.assertIn(f'href="{SITE}manual/"', head("Guide", "manual/"))

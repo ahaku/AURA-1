@@ -89,6 +89,7 @@ def prepare_emulator(destination=None):
             shutil.copy2(source, destination / name)
     copy_manual_images(destination / "img")
     shutil.copytree(ROOT / "app/web/words", destination / "words", dirs_exist_ok=True)
+    shutil.copytree(ROOT / "app/web/emu/reader", destination / "reader", dirs_exist_ok=True)
     from theme_manual import render_manual
     (destination / "manual.html").write_text(render_manual(portable=True), encoding="utf-8")
     worker = (destination / "sw.js").read_text(encoding="utf-8")
