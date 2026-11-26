@@ -144,7 +144,7 @@ try {
   await page.locator(".image-zoom").click();
   assert(await page.locator(".image-viewer").isVisible());
   await page.keyboard.press("Escape");
-  assert.equal(await page.locator(".image-viewer").count(), 0);
+  await page.locator(".image-viewer").waitFor({ state: "detached" });
   console.log("ok: guide search and enlarged controls diagram");
 
   const missing = await page.goto(
