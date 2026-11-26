@@ -71,7 +71,10 @@ def main(pkg=None, version=None, out=None):
     copy_assets(out)
 
     # 3. The Landing Page
-    landing_content = LANDING.replace("__VERSION__", html.escape(version)) \
+    install_label = "Install development firmware" if version == "dev" else f"Install firmware v{version}"
+    download_label = "Development firmware" if version == "dev" else f"Firmware v{version}"
+    landing_content = LANDING.replace("__INSTALL_FIRMWARE_LABEL__", html.escape(install_label)) \
+                             .replace("__DOWNLOAD_FIRMWARE_LABEL__", html.escape(download_label)) \
                              .replace("__PKG__", pkg_filename) \
                              .replace("__REPO__", repo)
     landing_content = landing_content.replace("__STUDIO_HEAD__", head("AURA-1 turns the M-VAVE FM-1 into a generative ambient instrument. Listen in your browser, play along, or install the open firmware."))

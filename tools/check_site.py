@@ -61,7 +61,7 @@ def check_site(directory):
         parser.feed(content)
         for url in parser.urls:
             local_url(page, url, parser.base)
-        if re.search(r"\{\{[A-Z_]+\}\}|__(?:VERSION|PKG|REPO)__|/\*(?:LIB|META|APP)\*/", content):
+        if re.search(r"\{\{[A-Z_]+\}\}|__(?:VERSION|PKG|REPO|INSTALL_FIRMWARE_LABEL|DOWNLOAD_FIRMWARE_LABEL)__|/\*(?:LIB|META|APP)\*/", content):
             errors.append(f"{page.relative_to(root)}: unresolved template")
 
     worker = root / "emu/sw.js"
